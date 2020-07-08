@@ -96,11 +96,10 @@ def change_dates_tocsv():
                     break
                 except ValueError:
                     pass
-        elif a < datetime.time(10):
+        else:
             for fmt in ('%b. %d, %Y', '%b %d, %Y'):
                 try:
                     newDate = datetime.datetime.strptime(fulldate, fmt).date()
-                    newDate = newDate - datetime.timedelta(days=1)
                     df13['Dates'][i] = newDate
                     break
                 except ValueError:
@@ -192,7 +191,7 @@ def read_news():
     df7 = df7.drop(['neg', 'neu', 'pos'], axis=1)
     df7.columns = ['Score', 'Headlines', 'Dates']
 
-    df4 = df7.groupby(['Dates']).sum()
+    df4 = df7.groupby(['Dates']).mean()
     df4['New_Score'] = df4['Score'].shift(1)
 
     df6 = pd.merge(df5[['Return']], df4[['New_Score']], left_index=True, right_index=True, how='left')
@@ -206,12 +205,14 @@ def read_news():
     ax2.plot(df6['Date'], df6['Return'], 'b-')
     ax1.set_xlabel('Dates')
     ax1.set_ylabel('New_Score', color='g')
+    ax1.set_ylim(-2, 2)
     ax2.set_ylabel('Return', color='b')
     plt.tight_layout()
 
     df6.fillna(0, inplace=True)
     # dfReturnsScore = df6[(df6['New_Score'] > 50) | (df6['New_Score'] < -50)]
     df6.plot(x="New_Score", y="Return", style="o")
+    plt.ylabel('Return')
     plt.show()
     # print(df6['Return'].corr(df6['New_Score']))
 
@@ -400,7 +401,6 @@ model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy']
 model.fit(traindataset.toarray(), traindata['Label'], epochs=20, batch_size=32, verbose=1, validation_split=0.2)
 
 val_loss, val_acc = model.evaluate(testdataset.toarray(), testdata['Label'])
-print(val_loss)
 print(val_acc)
 # print(np.array(traindata['Label']).reshape(1, -1, 1))
 
@@ -414,7 +414,5 @@ model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy']
 model.fit(np.array(traindataset.toarray()).reshape(traindataset.toarray().shape[0], 1, traindataset.toarray().shape[1]), traindata['Label'], epochs=10, verbose=1, validation_split=0.3, shuffle=False)
 
 val_loss, val_acc = model.evaluate(np.array(testdataset.toarray()).reshape(testdataset.toarray().shape[0], 1, testdataset.toarray().shape[1]), testdata['Label'])
-print(val_loss)
 print(val_acc)
-
 
