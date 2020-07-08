@@ -108,7 +108,7 @@ Apart from index price movement, I have used Vader to calculate SIA score for ea
 
 The movement of the SIA score has shown some correlations bwtween score and return
 
-![Image of polarity score vs return](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/polarity%20score%20vs%20return.png)
+![Image of polarity score vs return](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/polarity%20score%20vs%20return_2.png)
 
 
 SIA score of each day shows that it has no show of very strong relationship with return, like abovementioned points, top news from website is dominant to the result. If the headlines not well deliver the sentiment of the market. It has very bad Recall on prediction of price decrease
