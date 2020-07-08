@@ -1,35 +1,25 @@
-from __future__ import absolute_import, division, print_function
 import re
 import nltk
 import numpy as np
 import pickle
 import pandas as pd
 from bs4 import BeautifulSoup
-import os
 import requests
-import torch
-import torch.nn.functional as F
-from nltk import word_tokenize
-from nltk.sentiment.vader import SentimentIntensityAnalyzer as SIA
-# from pytorch_transformers import (BertConfig, BertForTokenClassification, BertTokenizer)
 from nltk.corpus import stopwords
 import datetime
 import matplotlib.pyplot as plt
-# from transformers import BertTokenizer
 from sklearn.cluster import KMeans
 from sklearn.neighbors import BallTree
-import tokenizers
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from nltk.stem import PorterStemmer
 import pandas_datareader.data as web
 import tensorflow as tf
-import matplotlib
+
 
 with open("sp500tickers_nlp.pickle", "rb") as f:
     stock = pickle.load(f)
@@ -133,7 +123,7 @@ def create_price():
         else:
             df2['Label'][i] = np.nan
     return df2
-df2 = create_price()
+# df2 = create_price()
 
 def stopwords_and_stemmimg(df):
     date_dict = {}
