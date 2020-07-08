@@ -20,11 +20,11 @@ Therefore, news after market close would be grouped into next day bin.
 
 **Create the Target Label dataset**
 
-Use Pandas datareader for getting stock Adj Close prices Dec 2015 to Jun 2020 sourced from Yahoo Finance
+Use Pandas datareader for getting stock Adj Close prices from Dec 2015 to Jun 2020 sourced from Yahoo Finance
 
 Calculate Daily Return by (today closing price/yesterday closing price -1)
 
-Label "0" if Daily Return >= 0 and otherwise "1"
+Label "0" if Daily Return >= 0 or otherwise "1"
 
 
 
@@ -50,28 +50,64 @@ This project has used three models to predict the accuracy: Random Forest, Mutil
 
 Before fitting into above three classifiers, headlines are grouped into one vector and use TfidfVectorizer to change the words to number for processing
 
-To find the "best" hyperparameters, GridSearchCV is used.
+Among three classifiers, Random forest has the best accuracy. To find the "best" hyperparameters, GridSearchCV is used.
 
-Random Forest
-0.5442477876106194
-              precision    recall  f1-score   support
+&nbsp;
 
-           0       0.57      0.85      0.68       129
-           1       0.41      0.13      0.20        97
+Below is the results of three models:
 
-    accuracy                           0.54       226
-   macro avg       0.49      0.49      0.44       226
-weighted avg       0.50      0.54      0.48       226
+<ins>Random Forest</ins>
+
+Accuracy: 0.5442477876106194
+
+                  precision    recall  f1-score   support
+
+             0       0.57      0.85      0.68       129
+             1       0.41      0.13      0.20        97
+
+    accuracy                             0.54       226
+    macro avg        0.49      0.49      0.44       226
+    weighted avg     0.50      0.54      0.48       226
+   
+
+
+
+&nbsp;
+
+Confusion Matrix
 
 [[110  19]
+
  [ 84  13]]
  
- MLP
-0.508849561214447
+ &nbsp;
+ 
+ <ins>MLP</ins>
+ 
+Accuracy: 0.508849561214447
 
-LSTM
-0.491150438785553
+&nbsp;
+
+<ins>LSTM</ins>
+
+Accuracy: 0.491150438785553
+
+## Interpretation
+
+
+Instead of looking at the actual SIA score,  the movement of the SIA score has shown some correlation bwtween score and return
 
 ![Image of polarity score vs return](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/polarity%20score%20vs%20return.png)
+
+
+The result is just above 50%. SIA score of each day shows that it has no very strong relationship with return due to below reasons:
+- Vader may not understand financial news very well due to finance terminology
+- Headlines are prone to be neutral and may not show strong negative words, causing bad recall for predicting down side
+
+
 ![Image of polarity score](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/polarity%20score.png)
+
+
+In S&P500, most of the news are focused on blue chips. Below is top 100 frequency
+
 ![Image of companies distribution](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/company%20distribution.png)
