@@ -18,6 +18,10 @@ Therefore, news after market close would be grouped into next day bin.
 
 - E.g. news released on 20:30pm 22 Jun 2020 is treated as 23 Jun 2020 bin
 
+In S&P500, most of the news are focused on blue chips. Below is top 100 frequency
+
+![Image of companies distribution](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/company%20distribution.png)
+
 **Create the Target Label dataset**
 
 Use Pandas datareader for getting stock Adj Close prices from Dec 2015 to Jun 2020 sourced from Yahoo Finance
@@ -26,7 +30,9 @@ Calculate Daily Return by (today closing price/yesterday closing price -1)
 
 Label "0" if Daily Return >= 0 or otherwise "1"
 
-
+For weekly and monthly up and down, it can show that usually up is more than down movement
+![Image of companies weekly](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/weekly%20up%26down.png)
+![Image of companies monthly](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/monthly%20up%26down.png)
 
 ## Data Precoessing
 **Date transformation**
@@ -90,23 +96,35 @@ Accuracy: 0.508849561214447
 
 <ins>LSTM</ins>
 
-Accuracy: 0.491150438785553
+Accuracy: 0.5
 
 ## Interpretation
-
-In S&P500, most of the news are focused on blue chips. Below is top 100 frequency
-
-![Image of companies distribution](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/company%20distribution.png)
 
 The result is just to be above 50% accuracy due to below reasons:
 - Vader may not understand financial news very well due to finance terminology
 - Headlines are prone to be neutral and may not show strong negative words, causing bad Recall for predicting down side
 - Some other factors which can affect the index cannot be covered in the top news because every day it has few top news. It may need more news for this project
 
+As the wordings of headlines varies, it is hard to cluster them into group unless need further name entity recognition (NER) and NLP to find verb and objects to identify the cluster better. Below is the example that the model thinks they are similar using KMeans and Ball Tree (tree size=2):
 
-Apart from index price movement, I have used Vader to calculate SIA score for each headlines and the do the index price prediction, although this project aims to predict next day index movement, not price. The result is shown below:
+Cluster ID 82 and ID 6 have similar subjects which is Futures in this example
 
-The movement of the SIA score has shown some correlations bwtween score and return
+[82  6]
+- 82 Futures point to muted open 2019-04-15
+- 82 Futures point to earnings-driven gains 2019-04-17
+- 82 Futures point to slight losses 2019-04-18
+- 82 Futures point barely downward 2016-04-20
+- 82 Futures point to a flat open for U.S. stocks 2019-04-23
+- 82 Futures point to weaker open 2017-04-04
+- 6 Futures inch up ahead of busy Fed day 2019-04-10
+- 6 Stocks edge higher ahead of FOMC minutes 2019-04-10
+- 6 Futures can't hold gains, slip into the red 2016-04-15
+- 6 Futures slip, but well off of overnight lows after Doha yields no progress 2016-04-18
+- 6 Futures lower ahead of earnings 2017-04-18
+
+Apart from index price movement, I have used Vader to calculate SIA score for each headlines and the do the index price prediction, although this project aims to predict next day index movement, not price.
+
+The SIA score and return movement is shown below
 
 ![Image of polarity score vs return](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/polarity%20score%20vs%20return_2.png)
 
