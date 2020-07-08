@@ -3,16 +3,16 @@ Getting S&amp;P top news from Dec 2015 to Jun 2020
 
 This project is to use 1-day news headlines to predict next day S&P500 movement (Up or Down)
 
-Web scraping from the website to get "Headlines", "Dates" and "Ticker"
+Web scraping from the website Seeking Alpha to get "Headlines", "Dates" and "Ticker" of Top News
 
 
 
 ## Data Collection
 **Create the News dataset**
 
-One day news headlines is composed of: all news before EST4pm today
+One day news headlines is composed of: all news from EST4pm yesterday to all news before EST4pm today
 
-To be practical, it should make decision to long or short the index for next day movement before today market close. 
+To make decision to long or short the index for next day movement before today market close, news after 4pm is not included in today bin for prediction of next day movement
 
 Therefore, news after market close would be grouped into next day bin.
 
@@ -20,7 +20,7 @@ Therefore, news after market close would be grouped into next day bin.
 
 **Create the Target Label dataset**
 
-Use Pandas datareader for getting stock Adj Close prices Dec 2015 to Jun 2020
+Use Pandas datareader for getting stock Adj Close prices Dec 2015 to Jun 2020 sourced from Yahoo Finance
 
 Calculate Daily Return by (today closing price/yesterday closing price -1)
 
@@ -52,3 +52,26 @@ Before fitting into above three classifiers, headlines are grouped into one vect
 
 To find the "best" hyperparameters, GridSearchCV is used.
 
+Random Forest
+0.5442477876106194
+              precision    recall  f1-score   support
+
+           0       0.57      0.85      0.68       129
+           1       0.41      0.13      0.20        97
+
+    accuracy                           0.54       226
+   macro avg       0.49      0.49      0.44       226
+weighted avg       0.50      0.54      0.48       226
+
+[[110  19]
+ [ 84  13]]
+ 
+ MLP
+0.508849561214447
+
+LSTM
+0.491150438785553
+
+![Image of polarity score vs return](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/polarity%20score%20vs%20return.png)
+![Image of polarity score](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/polarity%20score.png)
+![Image of companies distribution](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/company%20distribution.png)
