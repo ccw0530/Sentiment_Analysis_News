@@ -94,20 +94,27 @@ Accuracy: 0.491150438785553
 
 ## Interpretation
 
+In S&P500, most of the news are focused on blue chips. Below is top 100 frequency
 
-Instead of looking at the actual SIA score,  the movement of the SIA score has shown some correlation bwtween score and return
+![Image of companies distribution](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/company%20distribution.png)
+
+The result is just to be above 50% accuracy due to below reasons:
+- Vader may not understand financial news very well due to finance terminology
+- Headlines are prone to be neutral and may not show strong negative words, causing bad Recall for predicting down side
+- Some other factors which can affect the index cannot be covered in the top news because every day it has few top news. It may need more news for this project
+
+
+Apart from index price movement, I have used Vader to calculate SIA score for each headlines and the do the index price prediction, although this project aims to predict next day index movement, not price. The result is shown below:
+
+The movement of the SIA score has shown some correlations bwtween score and return
 
 ![Image of polarity score vs return](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/polarity%20score%20vs%20return.png)
 
 
-The result is just above 50%. SIA score of each day shows that it has no very strong relationship with return due to below reasons:
-- Vader may not understand financial news very well due to finance terminology
-- Headlines are prone to be neutral and may not show strong negative words, causing bad recall for predicting down side
-
+SIA score of each day shows that it has no show of very strong relationship with return, like abovementioned points, top news from website is dominant to the result. If the headlines not well deliver the sentiment of the market. It has very bad Recall on prediction of price decrease
 
 ![Image of polarity score](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/polarity%20score.png)
 
+However, if the last day closing price and the SIA score are fitted into the next day price prediction, it can show that closing price with sentiment score can learn faster than just using historical price alone in LSTM model with epoches 50. Meaning that news have impacts to improve the model learning the prices
 
-In S&P500, most of the news are focused on blue chips. Below is top 100 frequency
-
-![Image of companies distribution](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/company%20distribution.png)
+![Image of predicted price](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/predicted%20price.png)
