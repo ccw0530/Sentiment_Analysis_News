@@ -57,38 +57,37 @@ def create_price():
         else:
             df2['Label'][i] = np.nan
     return df2
-df2 = create_price()
 
 with open("result_top_news_2.pickle", "rb") as f:
     results = pickle.load(f)
 def read_news(df2):
-    df7 = pd.DataFrame(results)
-    df7 = df7.drop(['neg', 'neu', 'pos'], axis=1)
-    df7.columns = ['Score', 'Headlines', 'Dates']
+    df3 = pd.DataFrame(results)
+    df3 = df3.drop(['neg', 'neu', 'pos'], axis=1)
+    df3.columns = ['Score', 'Headlines', 'Dates']
 
-    df4 = df7.groupby(['Dates']).mean()
+    df4 = df3.groupby(['Dates']).mean()
     df4['New_Score'] = df4['Score'].shift(1)
 
-    df6 = pd.merge(df2[['Return']], df4[['New_Score']], left_index=True, right_index=True, how='left')
-    df6.reset_index(inplace=True)
+    df5 = pd.merge(df2[['Return']], df4[['New_Score']], left_index=True, right_index=True, how='left')
+    df5.reset_index(inplace=True)
     fig, ax1 = plt.subplots()
-    df6['Date']= pd.to_datetime(df6['Date'])
-    ax1.plot(df6['Date'], df6['New_Score'], 'g-')
+    df5['Date']= pd.to_datetime(df5['Date'])
+    ax1.plot(df5['Date'], df5['New_Score'], 'g-')
     ax1.xaxis.set_major_locator(matplotlib.dates.MonthLocator([1, 4, 7, 10]))
     ax1.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m'))
     ax2 = ax1.twinx()
-    ax2.plot(df6['Date'], df6['Return'], 'b-')
+    ax2.plot(df5['Date'], df5['Return'], 'b-')
     ax1.set_xlabel('Dates')
     ax1.set_ylabel('New_Score', color='g')
-    ax1.set_ylim(-2, 2)
+    ax1.set_ylim(-2, 1.5)
     ax2.set_ylabel('Return', color='b')
     plt.tight_layout()
 
-    df6.fillna(0, inplace=True)
-    # dfReturnsScore = df6[(df6['New_Score'] > 50) | (df6['New_Score'] < -50)]
-    df6.plot(x="New_Score", y="Return", style="o")
+    df5.fillna(0, inplace=True)
+    # dfReturnsScore = df5[(df5['New_Score'] > 50) | (df5['New_Score'] < -50)]
+    df5.plot(x="New_Score", y="Return", style="o")
     plt.ylabel('Return')
-    # plt.show()
+    plt.show()
 
     dfReturnsScore = pd.merge(df2[['Return']], df4[['Score']], left_index=True, right_index=True, how='left')
     dfReturnsScore.fillna(0, inplace=True)

@@ -1,5 +1,4 @@
 from __future__ import absolute_import, division, print_function
-import json
 import re
 import nltk
 import numpy as np
@@ -53,16 +52,16 @@ def get_top_news():
         response = requests.get(url = url, headers = headers)
         while response.status_code != 200:
             response = requests.get(url=url, headers=headers)
-
-        soup = BeautifulSoup(response.text, 'html.parser')
-        for script in soup.find_all('div', class_="title"):
-            headlines.append(script.text)
-        for script in soup.find_all('span', class_="item-date"):
-            dates.append(script.text)
-        for script in soup.find_all('div', class_="media-left"):
-            tickers.append(script.text)
-        for i in range(len(headlines)):
-            total.append((headlines[i], dates[i], tickers[i]))
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            for script in soup.find_all('div', class_="title"):
+                headlines.append(script.text)
+            for script in soup.find_all('span', class_="item-date"):
+                dates.append(script.text)
+            for script in soup.find_all('div', class_="media-left"):
+                tickers.append(script.text)
+            for i in range(len(headlines)):
+                total.append((headlines[i], dates[i], tickers[i]))
 
     with open("headlines_top_news.pickle","wb") as f:
         pickle.dump(total, f)
@@ -71,10 +70,14 @@ def get_top_news():
 with open("headlines_top_news.pickle", "rb") as f:
     headlines = pickle.load(f)
 def change_dates_tocsv():
-    df13 = pd.DataFrame(headlines, columns=('Headlines', 'Dates', 'Ticker'))
-    for i in range(len(df13['Dates'])):
+    df1 = pd.DataFrame(headlines, columns=('Headlines', 'Dates', 'Ticker'))
+    df1.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
+    df1 = df1.drop_duplicates()
+    df1 = df1.sort_values(by='Dates')
+    df1.reset_index(drop=True, inplace=True)
+    for i in range(len(df1['Dates'])):
         match = re.search(r'\w{3}\.\s\d{1,2}\,\s\d{4}|May\s\d{1,2}\,\s\d{4}|\w{3}\.\s\d{1,2}|May\s\d{1,2}|\bToday\b',
-                          df13['Dates'][i])
+                          df1['Dates'][i])
         if re.search(r'\w{3}\.\s\d{1,2}\,\s\d{4}|\w{3}\s\d{1,2}\,\s\d{4}', match[0]):
             fulldate = match[0]
         elif re.search(r'\bToday\b', match[0]):
@@ -82,17 +85,17 @@ def change_dates_tocsv():
         else:
             fulldate = match[0] + ", 2020"
 
-        if len(df13['Dates'][i].split(',')) == 2:
-            a = datetime.datetime.strptime(df13['Dates'][i].split(',')[1].strip(), '%I:%M %p').time()
-        elif len(df13['Dates'][i].split(',')) == 3:
-            a = datetime.datetime.strptime(df13['Dates'][i].split(',')[2].strip(), '%I:%M %p').time()
+        if len(df1['Dates'][i].split(',')) == 2:
+            time = datetime.datetime.strptime(df1['Dates'][i].split(',')[1].strip(), '%I:%M %p').time()
+        elif len(df1['Dates'][i].split(',')) == 3:
+            time = datetime.datetime.strptime(df1['Dates'][i].split(',')[2].strip(), '%I:%M %p').time()
 
-        if a > datetime.time(16):
+        if time > datetime.time(16):
             for fmt in ('%b. %d, %Y', '%b %d, %Y'):
                 try:
                     newDate = datetime.datetime.strptime(fulldate, fmt).date()
                     newDate = newDate + datetime.timedelta(days=1)
-                    df13['Dates'][i] = newDate
+                    df1['Dates'][i] = newDate
                     break
                 except ValueError:
                     pass
@@ -100,34 +103,37 @@ def change_dates_tocsv():
             for fmt in ('%b. %d, %Y', '%b %d, %Y'):
                 try:
                     newDate = datetime.datetime.strptime(fulldate, fmt).date()
-                    df13['Dates'][i] = newDate
+                    df1['Dates'][i] = newDate
                     break
                 except ValueError:
                     pass
-    df13.to_csv('Top_News_2.csv', index=False)
+    df1.to_csv('Top_News_2.csv', index=False)
 # change_dates_tocsv()
 
 stop_words = set(stopwords.words('english'))
 ps = PorterStemmer()
 
-df13 = pd.read_csv('Top_News_2.csv')
-df13.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
+df1 = pd.read_csv('Top_News_2.csv')
+df1.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
 
-start = datetime.datetime(2015, 12, 20)
-end = datetime.datetime(2020, 6, 22)
-df_stock = web.DataReader('^GSPC', 'yahoo', start, end)
-df_stock.to_csv('^GSPC_2.csv')
-df5 = pd.read_csv('^GSPC_2.csv', index_col=0)
-df5 = df5.drop(['Open', 'High', 'Low', 'Close', 'Volume'], axis=1)  # drop unwanted rows
-df5['Return'] = df5['Adj Close'] / df5['Adj Close'].shift(1) - 1
-df5['Label'] = ''
-for i in range(len(df5['Return'])):
-    if df5['Return'][i] >= 0:
-        df5['Label'][i] = 0
-    elif df5['Return'][i] < 0:
-        df5['Label'][i] = 1
-    else:
-        df5['Label'][i] = np.nan
+def create_price():
+    start = datetime.datetime(2015, 12, 20)
+    end = datetime.datetime(2020, 6, 22)
+    df_stock = web.DataReader('^GSPC', 'yahoo', start, end)
+    df_stock.to_csv('^GSPC_2.csv')
+    df2 = pd.read_csv('^GSPC_2.csv', index_col=0)
+    df2 = df2.drop(['Open', 'High', 'Low', 'Close', 'Volume'], axis=1)  # drop unwanted rows
+    df2['Return'] = df2['Adj Close'] / df2['Adj Close'].shift(1) - 1
+    df2['Label'] = ''
+    for i in range(len(df2['Return'])):
+        if df2['Return'][i] >= 0:
+            df2['Label'][i] = 0
+        elif df2['Return'][i] < 0:
+            df2['Label'][i] = 1
+        else:
+            df2['Label'][i] = np.nan
+    return df2
+df2 = create_price()
 
 def stopwords_and_stemmimg(df):
     date_dict = {}
@@ -149,102 +155,31 @@ def stopwords_and_stemmimg(df):
     with open("data_for_df.pickle", "wb") as f:
         pickle.dump(data_for_df, f)
 
-
     with open("data_for_df.pickle", "rb") as f:
         data_for_df = pickle.load(f)
-    df14 = pd.DataFrame(data_for_df)
-    df14.columns = ['Headlines', 'Dates']
-    df14.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
-    df14 = df14.sort_values(by='Dates')
-    df14.set_index('Dates', inplace=True)
+    df3 = pd.DataFrame(data_for_df)
+    df3.columns = ['Headlines', 'Dates']
+    df3.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
+    df3 = df3.sort_values(by='Dates')
+    df3.set_index('Dates', inplace=True)
 
-    df11 = pd.merge(df14['Headlines'], df5['Label'], left_index=True, right_index=True, how='left')
-    df11['New_Headlines'] = df11['Headlines'].shift(1)
-    df11.dropna(inplace=True)
-    df11['Label'] = df11['Label'].astype('int')
-    df11.reset_index(inplace=True)
-    return df11
-
-
-results = []
-
-def news_sentiment():
-    for i in range(len(df13['Headlines'])):
-        news = df13['Headlines'][i]
-        news = nltk.word_tokenize(news)
-        news = [w for w in news if w not in stop_words]
-        news = ' '.join(news)
-        pol_score = SIA().polarity_scores(news)  # run analysis
-        pol_score['headline'] = news  # add headlines for viewing
-        pol_score['date'] = df13['Dates'][i]
-        results.append(pol_score)
-
-    with open("result_top_news_2.pickle", "wb") as f:
-        pickle.dump(results, f)
-# news_sentiment()
-
-with open("result_top_news_2.pickle", "rb") as f:
-    results = pickle.load(f)
-
-def read_news():
-    df7 = pd.DataFrame(results)
-    df7 = df7.drop(['neg', 'neu', 'pos'], axis=1)
-    df7.columns = ['Score', 'Headlines', 'Dates']
-
-    df4 = df7.groupby(['Dates']).mean()
-    df4['New_Score'] = df4['Score'].shift(1)
-
-    df6 = pd.merge(df5[['Return']], df4[['New_Score']], left_index=True, right_index=True, how='left')
-    df6.reset_index(inplace=True)
-    fig, ax1 = plt.subplots()
-    df6['Date']= pd.to_datetime(df6['Date'])
-    ax1.plot(df6['Date'], df6['New_Score'], 'g-')
-    ax1.xaxis.set_major_locator(matplotlib.dates.MonthLocator([1, 4, 7, 10]))
-    ax1.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m'))
-    ax2 = ax1.twinx()
-    ax2.plot(df6['Date'], df6['Return'], 'b-')
-    ax1.set_xlabel('Dates')
-    ax1.set_ylabel('New_Score', color='g')
-    ax1.set_ylim(-2, 2)
-    ax2.set_ylabel('Return', color='b')
-    plt.tight_layout()
-
-    df6.fillna(0, inplace=True)
-    # dfReturnsScore = df6[(df6['New_Score'] > 50) | (df6['New_Score'] < -50)]
-    df6.plot(x="New_Score", y="Return", style="o")
-    plt.ylabel('Return')
-    plt.show()
-    # print(df6['Return'].corr(df6['New_Score']))
-
-    dfReturnsScore3 = pd.merge(df5[['Return']], df4[['New_Score', 'Score']], left_index=True, right_index=True, how='left')
-    dfReturnsScore3.fillna(0, inplace=True)
-    # print(dfReturnsScore3)
-    count = 0
-    total = 0
-    for i in range(len(dfReturnsScore3['New_Score'])):
-        diff = dfReturnsScore3['New_Score'][i] - dfReturnsScore3['Score'][i]
-        if diff > 0 and dfReturnsScore3['Return'][i] > 0:
-            count += 1
-        elif diff < 0 and dfReturnsScore3['Return'][i] < 0:
-            count += 1
-        else:
-            pass
-        total += 1
-    # print(total, count/total*100, '%')
-    dfReturnsScore = pd.merge(df5[['Return']], df4[['Score']], left_index=True, right_index=True, how='left')
-    return dfReturnsScore
-# read_news()
+    df4 = pd.merge(df3['Headlines'], df2['Label'], left_index=True, right_index=True, how='left')
+    df4['New_Headlines'] = df4['Headlines'].shift(1)
+    df4.dropna(inplace=True)
+    df4['Label'] = df4['Label'].astype('int')
+    df4.reset_index(inplace=True)
+    return df4
 
 number_of_news = {}
-for i in df13['Ticker']:
+for i in df1['Ticker']:
     if i in ticker:
         number_of_news[i] = 0
 
 def plot():
     plot_number_of_news = []
-    for i in range(len(df13['Ticker'])):
-        if df13['Ticker'][i] in ticker:
-            number_of_news[df13['Ticker'][i]] += 1
+    for i in range(len(df1['Ticker'])):
+        if df1['Ticker'][i] in ticker:
+            number_of_news[df1['Ticker'][i]] += 1
     top_coms = {k: v for k, v in sorted(number_of_news.items(), key=lambda item: item[1])}
     for i, j in top_coms.items():
         plot_number_of_news.append((i, j))
@@ -256,18 +191,15 @@ def plot():
     plt.xlabel('Companies')
     plt.ylabel('Counts')
     plt.title('Number of news for each company')
-    plt.ylim(100, 9000)
+    plt.ylim(0, 300)
     plt.xticks(top100[:, 0], rotation='vertical')
     plt.show()
 # plot()
 
-
 def create_Kmanes():
-    # news_id = []
-    # news_id_with_dates = []
     total_news = []
-    for i in range(len(df13['Headlines'])):
-        news = nltk.word_tokenize(df13['Headlines'][i].lower())
+    for i in range(len(df1['Headlines'])):
+        news = nltk.word_tokenize(df1['Headlines'][i].lower())
         filtered_sentence = [w for w in news if w not in stop_words]
         stemmed_sentence = [ps.stem(w) for w in filtered_sentence]
         news = ' '.join(stemmed_sentence)
@@ -278,7 +210,6 @@ def create_Kmanes():
 
 with open("total_news_2.pickle", "rb") as f:
     total_news = pickle.load(f)
-
 def create_total_news():
     # countvector = CountVectorizer(ngram_range=(1, 2), max_df=0.4, max_features=10000, stop_words=stop_words)
     tfidfconverter = TfidfVectorizer(ngram_range=(1, 1), max_features=12000, max_df=0.4, stop_words=stop_words)
@@ -297,8 +228,6 @@ with open("labels_2.pickle", "rb") as f:
     labels = pickle.load(f)
 with open("centroids_2.pickle", "rb") as f:
     centroids = pickle.load(f)
-
-
 def create_cluster_news():
     cluster_id = {}
     for x in labels:
@@ -317,30 +246,14 @@ with open("cluster_news_top_news_2.pickle", "rb") as f:
     cluster_news = pickle.load(f)
 tree = BallTree(centroids)
 dist, ind = tree.query(centroids, k=2)
-
-cluster_news_per_segment = []
-for i in ind:
-    # if 0 not in i:
-    for index in i:
-        for j in cluster_news[index]:
-            cluster_news_per_segment.append((df13['Headlines'][j], df13['Dates'][j]))
-df18 = pd.DataFrame(cluster_news_per_segment)
-df18.columns = ['Headlines', 'Dates']
-df18.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
-df18 = df18.drop_duplicates(subset='Headlines', keep='first')
-df18 = df18.sort_values(by='Dates')
-df18.reset_index(drop=True, inplace=True)
-
-
 # for i in ind:
-#     if 0 not in i:
-#         print(sorted(i))
-# print(np.sort(ind))
-# for i in ind:
-#     print(sorted(i))
-# print(df13)
-# print(df18)
-df = stopwords_and_stemmimg(df18)
+#     if 25 not in i:
+#         print(i)
+#         for index in i:
+#             for j in cluster_news[index]:
+#                 print(index, df1['Headlines'][j], df1['Dates'][j])
+
+df = stopwords_and_stemmimg(df1)
 traindata = df.iloc[:int(len(df['Headlines'])*0.8)]
 testdata = df.iloc[int(len(df['Headlines'])*0.8):]
 
