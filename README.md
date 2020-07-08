@@ -127,6 +127,7 @@ The result is just to be above 50% accuracy due to below reasons:
 &nbsp;
 
 - Headlines are prone to be neutral and may not show strong negative words, causing bad Recall for predicting down side
+- No bag of words for financial news to determine the sentiment
 - Some other factors which can affect the index cannot be covered in the top news because every day it has few top news. It may need more news for this project
 
 As the wordings of headlines varies, it is hard to cluster them into group unless need further name entity recognition (NER) and NLP to find verb and objects to identify the cluster better. Below is the example that the model thinks they are similar using KMeans and Ball Tree (tree size=2):
@@ -164,6 +165,6 @@ However, if the last day closing price and the SIA score are fitted into the nex
 ## Conclusion
 It finds that news sentiemnt anaylsis have impact to price movement. However, wordings or sentiment of Headlines, number of headlines for 1 day, other factors, Vader sentiment classification would affect the result. 
 
-For the future, it may need to extract another sources of information, for example, Market Outlook article compsosed by diffrent aurthors may have more sentiment.
+For the future, it may need to extract another sources of information, for example, Market Outlook article compsosed by diffrent aurthors may have more sentiment. And, it may need to build custom bag of words that is for the purpose of analyzing the sentiment of headlines
 
 Also, using another NLP model, such as BERT which use bi-directional way to understand the context of the sentence better and use the pretrained BERT to train a  custom features.
