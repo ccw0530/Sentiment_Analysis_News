@@ -76,11 +76,9 @@ Accuracy: 0.5442477876106194
     weighted avg     0.50      0.54      0.48       226
    
 
-
-
 &nbsp;
 
-Confusion Matrix
+Confusion Matrix:
 
 [[110  19]
 
@@ -130,7 +128,7 @@ The result is just to be above 50% accuracy due to below reasons:
 - No bag of words for financial news to determine the sentiment
 - Some other factors which can affect the index cannot be covered in the top news because every day it has few top news. It may need more news for this project
 
-As the wordings of headlines varies, it is hard to cluster them into group unless need further name entity recognition (NER) and NLP to find verb and objects to identify the cluster better. Below is the example that the model thinks they are similar using KMeans and Ball Tree (tree size=2):
+As the wordings of headlines varies, it is hard to cluster them into group unless need further name entity recognition (NER) and NLP to find verb and objects to identify the cluster better. Below is the example that the model thinks they are similar using KMeans Clustering and Ball Tree (tree size=2):
 
 Cluster ID 82 and ID 6 have similar subjects which is Futures in this example
 
