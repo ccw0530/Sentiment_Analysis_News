@@ -24,7 +24,7 @@ In S&P500, most of the news are focused on blue chips. Below is top 100 frequenc
 
 **Create the Target Label dataset**
 
-Use Pandas datareader for getting stock Adj Close prices from Dec 2015 to Jun 2020 sourced from Yahoo Finance
+Use Pandas datareader for getting S&P500(Ticker: ^GSPC) Adj Close prices from Dec 2015 to Jun 2020 sourced from Yahoo Finance. It should be fine to also use S&P500 ETF Trust (Ticker:SPY) because of this ETF tracing the performance of S&P500
 
 Calculate Daily Return by (today closing price/yesterday closing price -1)
 
@@ -101,8 +101,33 @@ Accuracy: 0.5
 ## Interpretation
 
 The result is just to be above 50% accuracy due to below reasons:
-- Vader may not understand financial news very well due to finance terminology
+- Vader may not understand financial news very well due to finance terminology. Below examples show that Vader cannot distingust the corresponding effect of interest rate (Monetary Policies imposed by FED) and no idea of what abbreviation GDP is
+
+<ins>Example 1</ins>
+
+'FED increases the interest rate by 0.25%'
+
+  - {'neg': 0.0, 'neu': 0.667, 'pos': 0.333, 'compound': 0.4588}
+
+'FED increases the interest rate by 0.25%'
+
+  - {'neg': 0.0, 'neu': 0.667, 'pos': 0.333, 'compound': 0.4588}
+
+<ins>Example 2</ins>
+
+'GDP increases by 100%'
+
+  - {'neg': 0.0, 'neu': 1.0, 'pos': 0.0, 'compound': 0.0}
+
+'GDP decreases by 100%'
+
+  - {'neg': 0.0, 'neu': 1.0, 'pos': 0.0, 'compound': 0.0}
+  
+&nbsp;
+&nbsp;
+
 - Headlines are prone to be neutral and may not show strong negative words, causing bad Recall for predicting down side
+- No bag of words for financial news to determine the sentiment
 - Some other factors which can affect the index cannot be covered in the top news because every day it has few top news. It may need more news for this project
 
 As the wordings of headlines varies, it is hard to cluster them into group unless need further name entity recognition (NER) and NLP to find verb and objects to identify the cluster better. Below is the example that the model thinks they are similar using KMeans and Ball Tree (tree size=2):
@@ -136,3 +161,10 @@ SIA score of each day shows that it has no show of very strong relationship with
 However, if the last day closing price and the SIA score are fitted into the next day price prediction, it can show that closing price with sentiment score can learn faster than just using historical price alone in LSTM model with epoches 50. Meaning that news have impacts to improve the model learning the prices
 
 ![Image of predicted price](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/predicted%20price.png)
+
+## Conclusion
+It finds that news sentiemnt anaylsis have impact to price movement. However, wordings or sentiment of Headlines, number of headlines for 1 day, other factors, Vader sentiment classification would affect the result. 
+
+For the future, it may need to extract another sources of information, for example, Market Outlook article compsosed by diffrent aurthors may have more sentiment. And, it may need to build custom bag of words that is for the purpose of analyzing the sentiment of financial headlines
+
+Also, using another NLP model, such as BERT which use bi-directional way to understand the context of the sentence better and use the pretrained BERT to train a  custom features.
