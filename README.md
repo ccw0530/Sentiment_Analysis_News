@@ -165,6 +165,6 @@ However, if the last day closing price and the SIA score are fitted into the nex
 ## Conclusion
 It finds that news sentiemnt anaylsis have impact to price movement. However, wordings or sentiment of Headlines, number of headlines for 1 day, other factors, Vader sentiment classification would affect the result. 
 
-For the future, it may need to extract another sources of information, for example, Market Outlook article compsosed by diffrent aurthors may have more sentiment. And, it may need to build custom bag of words that is for the purpose of analyzing the sentiment of headlines
+For the future, it may need to extract another sources of information, for example, Market Outlook article compsosed by diffrent aurthors may have more sentiment. And, it may need to build custom bag of words that is for the purpose of analyzing the sentiment of financial headlines
 
 Also, using another NLP model, such as BERT which use bi-directional way to understand the context of the sentence better and use the pretrained BERT to train a  custom features.
