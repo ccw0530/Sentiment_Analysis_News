@@ -84,27 +84,26 @@ Best parameters set:
  
  &nbsp;
   
- Accuracy: 0.5575221238938053
+ Accuracy: 0.5530973451327433
 
                     precision    recall  f1-score   support
 
-           0           0.57      0.91      0.70       128
-           1           0.45      0.09      0.15        98
+           0           0.57      0.89      0.69       128
+           1           0.44      0.11      0.18        98
 
-    accuracy                               0.56       226
-    macro avg          0.51      0.50      0.43       226
-    weighted avg       0.52      0.56      0.46       226
-
+    accuracy                               0.55       226
+    macro avg          0.50      0.50      0.44       226
+    weighted avg       0.51      0.55      0.47       226
 
  &nbsp;
 
  Confusion Matrix:
 
-[[117  11]
+[[114  14]
 
- [ 89   9]]
+ [ 87  11]]
  
- Log Loss: 0.7031728585645487
+ Log Loss: 0.7008060886845231
  
  
  
