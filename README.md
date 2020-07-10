@@ -56,45 +56,78 @@ This project has used three models to predict the accuracy: Random Forest, Mutil
 
 Before fitting into above three classifiers, headlines are grouped into one vector and use TfidfVectorizer to change the words to number for processing
 
-Among three classifiers, Random forest has the best accuracy. To find the "best" hyperparameters, GridSearchCV is used.
+Among three classifiers, three model accuracy is quite similar. To find the "best" hyperparameters, GridSearchCV can be used.
 
+**Below hyperparameters are calculated by metices: neg_log_loss**
+
+Best score: -0.664
+
+Best parameters set:
+  - clf__criterion: 'entropy'
+  - clf__n_estimators: 1000
+  - tfidf__max_df: 0.6
+  - tfidf__max_features: 10000
+  - tfidf__ngram_range: (1, 1)
+
+ Best score: 0.625
+
+ Best parameters set:
+  - clf__criterion: 'entropy'
+  - clf__n_estimators: 1000
+  - tfidf__max_df: 0.5
+  - tfidf__max_features: 20000
+  - tfidf__ngram_range: (1, 1)
+  
 &nbsp;
-
-Below is the results of three models:
 
 <ins>Random Forest</ins>
-
-Accuracy: 0.5442477876106194
-
-                  precision    recall  f1-score   support
-
-             0       0.57      0.85      0.68       129
-             1       0.41      0.13      0.20        97
-
-    accuracy                             0.54       226
-    macro avg        0.49      0.49      0.44       226
-    weighted avg     0.50      0.54      0.48       226
-   
-
-&nbsp;
-
-Confusion Matrix:
-
-[[110  19]
-
- [ 84  13]]
  
  &nbsp;
+  
+ Accuracy: 0.5575221238938053
+
+                    precision    recall  f1-score   support
+
+           0           0.57      0.91      0.70       128
+           1           0.45      0.09      0.15        98
+
+    accuracy                               0.56       226
+    macro avg          0.51      0.50      0.43       226
+    weighted avg       0.52      0.56      0.46       226
+
+
+ &nbsp;
+
+ Confusion Matrix:
+
+[[117  11]
+
+ [ 89   9]]
+ 
+ Log Loss: 0.7031728585645487
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
  
  <ins>MLP</ins>
- 
-Accuracy: 0.508849561214447
+
+
+Accuracy: 0.5619469285011292
 
 &nbsp;
 
 <ins>LSTM</ins>
 
-Accuracy: 0.5
+
+Accuracy: 0.5663716793060303
 
 ## Interpretation
 
