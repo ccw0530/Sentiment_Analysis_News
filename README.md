@@ -60,6 +60,8 @@ Among three classifiers, three model accuracy is quite similar. To find the "bes
 
 **Below hyperparameters are calculated by metices: neg_log_loss**
 
+*GridSearchCV using logloss*
+
 Best score: -0.664
 
 Best parameters set:
@@ -68,7 +70,11 @@ Best parameters set:
   - tfidf__max_df: 0.6
   - tfidf__max_features: 10000
   - tfidf__ngram_range: (1, 1)
-
+ 
+ &nbsp;
+ 
+ *GridSearchCV using accuracy*
+ 
  Best score: 0.625
 
  Best parameters set:
@@ -84,7 +90,7 @@ Best parameters set:
  
  &nbsp;
   
- Accuracy: 0.5530973451327433
+ Accuracy: 0.5530973451327433 (range approxiately from 0.53 - 0.57)
 
                     precision    recall  f1-score   support
 
@@ -118,15 +124,17 @@ Best parameters set:
  
  <ins>MLP</ins>
 
+Data is shuffled before fitting to train
 
-Accuracy: 0.5619469285011292
+Accuracy: 0.5619469285011292 (range approxiately from 0.55 - 0.56)
 
 &nbsp;
 
 <ins>LSTM</ins>
 
+Data is NOT shuffled
 
-Accuracy: 0.5663716793060303
+Accuracy: 0.5663716793060303 (relatively stable comparing with above two models)
 
 ## Interpretation
 
