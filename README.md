@@ -113,12 +113,12 @@ Best parameters set:
  
  ************UPDATE on using Market Outlook and Top News headlines together************
 
-Accuraqcy increases by around 6%. Log Loss also decreases, meaning predicted probability is closer to to actual result
+Accuraqcy increases by around 3-6%. Log Loss also decreases, meaning predicted probability is closer to to actual result
 
 Recall has 11% improvement as it can distinguish more down movement correctly
 
 
- Accuracy: 0.6079295154185022
+ Accuracy: 0.6079295154185022 (range approxiately from 0.57 - 0.60)
 
   
                   precision    recall  f1-score   support
