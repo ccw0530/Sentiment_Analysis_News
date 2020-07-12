@@ -56,47 +56,85 @@ This project has used three models to predict the accuracy: Random Forest, Mutil
 
 Before fitting into above three classifiers, headlines are grouped into one vector and use TfidfVectorizer to change the words to number for processing
 
-Among three classifiers, Random forest has the best accuracy. To find the "best" hyperparameters, GridSearchCV is used.
+Among three classifiers, three model accuracy is quite similar. To find the "best" hyperparameters, GridSearchCV can be used.
 
-&nbsp;
+**Below hyperparameters are calculated by metices: neg_log_loss**
 
-Below is the results of three models:
+*GridSearchCV using logloss*
 
-<ins>Random Forest</ins>
+Best score: -0.664
 
-Accuracy: 0.5442477876106194
-
-                  precision    recall  f1-score   support
-
-             0       0.57      0.85      0.68       129
-             1       0.41      0.13      0.20        97
-
-    accuracy                             0.54       226
-    macro avg        0.49      0.49      0.44       226
-    weighted avg     0.50      0.54      0.48       226
-   
-
-
-
-&nbsp;
-
-Confusion Matrix
-
-[[110  19]
-
- [ 84  13]]
+Best parameters set:
+  - clf__criterion: 'entropy'
+  - clf__n_estimators: 1000
+  - tfidf__max_df: 0.6
+  - tfidf__max_features: 10000
+  - tfidf__ngram_range: (1, 1)
  
  &nbsp;
  
- <ins>MLP</ins>
+ *GridSearchCV using accuracy*
  
-Accuracy: 0.508849561214447
+ Best score: 0.625
+
+ Best parameters set:
+  - clf__criterion: 'entropy'
+  - clf__n_estimators: 1000
+  - tfidf__max_df: 0.5
+  - tfidf__max_features: 20000
+  - tfidf__ngram_range: (1, 1)
+  
+&nbsp;
+
+<ins>Random Forest</ins>
+ 
+ &nbsp;
+  
+ Accuracy: 0.5530973451327433 (range approxiately from 0.53 - 0.57)
+
+                    precision    recall  f1-score   support
+
+           0           0.57      0.89      0.69       128
+           1           0.44      0.11      0.18        98
+
+    accuracy                               0.55       226
+    macro avg          0.50      0.50      0.44       226
+    weighted avg       0.51      0.55      0.47       226
+
+ &nbsp;
+
+ Confusion Matrix:
+
+[[114  14]
+
+ [ 87  11]]
+ 
+ Log Loss: 0.7008060886845231
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ <ins>MLP</ins>
+
+Data is shuffled before fitting to train
+
+Accuracy: 0.5619469285011292 (range approxiately from 0.55 - 0.56)
 
 &nbsp;
 
 <ins>LSTM</ins>
 
-Accuracy: 0.5
+Data is NOT shuffled
+
+Accuracy: 0.5663716793060303 (relatively stable comparing with above two models)
 
 ## Interpretation
 
@@ -130,7 +168,7 @@ The result is just to be above 50% accuracy due to below reasons:
 - No bag of words for financial news to determine the sentiment
 - Some other factors which can affect the index cannot be covered in the top news because every day it has few top news. It may need more news for this project
 
-As the wordings of headlines varies, it is hard to cluster them into group unless need further name entity recognition (NER) and NLP to find verb and objects to identify the cluster better. Below is the example that the model thinks they are similar using KMeans and Ball Tree (tree size=2):
+As the wordings of headlines varies, it is hard to cluster them into group unless need further name entity recognition (NER) and NLP to find verb and objects to identify the cluster better. Below is the example that the model thinks they are similar using KMeans Clustering and Ball Tree (tree size=2):
 
 Cluster ID 82 and ID 6 have similar subjects which is Futures in this example
 
