@@ -19,8 +19,43 @@ from sklearn.pipeline import Pipeline
 from nltk.stem import PorterStemmer
 import pandas_datareader.data as web
 import tensorflow as tf
+from keras.utils import np_utils
+from sklearn.metrics import log_loss
+from keras.wrappers.scikit_learn import KerasClassifier
+from tensorflow.keras.callbacks import TensorBoard
+from tokenizers import ByteLevelBPETokenizer
+from transformers import TFRobertaModel
+import tokenizers
+from sklearn.model_selection import train_test_split
+
+stop_words = set(stopwords.words('english'))
+ps = PorterStemmer()
 
 
+"""EXTRACT TICKERS FROM WIKI"""
+def save_sp500_tickers():
+    r = requests.get("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies")
+    soup = BeautifulSoup(r.text, "html.parser")
+
+    stock_tag = soup.find("table", class_="wikitable sortable")
+    # print(stock_tag)
+
+    tickers = []
+
+    for row in stock_tag.find_all("tr")[1:]:
+        ticker = row.find_all("td")[0].text
+        # print(ticker)
+        ticker = ticker[:-1] #to remove the new line
+        # print(ticker)
+        mapping = str.maketrans(".", "-")
+        ticker = ticker.translate(mapping)
+        tickers.append(ticker)
+    #
+    with open("sp500tickers.pickle","wb") as f:
+        pickle.dump(tickers, f)
+# save_sp500_tickers()
+
+"""CREATE TICKER LIST"""
 with open("sp500tickers_nlp.pickle", "rb") as f:
     stock = pickle.load(f)
 t = np.array(stock)[:, 0]
@@ -30,6 +65,7 @@ for i in t:
     i = i.translate(mapping)
     ticker.append(i)
 
+"""GET TOP NEWS"""
 def get_top_news():
     headlines, dates, tickers, total = [], [], [], []
     for i in range(62):
@@ -50,21 +86,89 @@ def get_top_news():
                 dates.append(script.text)
             for script in soup.find_all('div', class_="media-left"):
                 tickers.append(script.text)
-            for i in range(len(headlines)):
-                total.append((headlines[i], dates[i], tickers[i]))
 
+    for i in range(len(headlines)):
+        total.append((headlines[i], dates[i], tickers[i]))
     with open("headlines_top_news.pickle","wb") as f:
         pickle.dump(total, f)
 # get_top_news()
-
 with open("headlines_top_news.pickle", "rb") as f:
     headlines = pickle.load(f)
-def change_dates_tocsv(headlines, today='', yesterday=''):
-    df1 = pd.DataFrame(headlines, columns=('Headlines', 'Dates', 'Ticker'))
+
+"""GET MARKET OUTLOOK"""
+def get_market_outlook():
+    headlines, dates, tickers, total = [], [], [], []
+    for i in range(1000, 1040):
+        i += 1
+        url = f"https://seekingalpha.com/market-outlook?page={str(i)}"
+        headers = {
+            "content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "Origin": "https://seekingalpha.com",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36"}
+
+        response = requests.get(url=url, headers=headers)
+        while response.status_code != 200:
+            print(url, response.status_code)
+            response = requests.get(url=url, headers=headers)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            for script in soup.find_all('div', class_="media-body"):
+                for i in script.find_all('a', class_="a-title"):
+                    headlines.append(i.text)
+                for j in script.find_all('span'):
+                    if re.search(r'\d\b\sAM\b', j.text) or re.search(r'\d\b\sPM\b', j.text):
+                        dates.append(j.text)
+
+    for k in range(len(headlines)):
+        total.append((headlines[k], dates[k], ''))
+    with open("headlines_mkt_1001_1040.pickle", "wb") as f:
+        pickle.dump(total, f)
+# get_market_outlook()
+
+with open(f"headlines_mkt_1_100.pickle", "rb") as f:
+    cluster_news_1 = pickle.load(f)
+with open(f"headlines_mkt_101_200.pickle", "rb") as f:
+    cluster_news_2 = pickle.load(f)
+with open(f"headlines_mkt_201_300.pickle", "rb") as f:
+    cluster_news_3 = pickle.load(f)
+with open(f"headlines_mkt_301_400.pickle", "rb") as f:
+    cluster_news_4 = pickle.load(f)
+with open(f"headlines_mkt_401_500.pickle", "rb") as f:
+    cluster_news_5 = pickle.load(f)
+with open(f"headlines_mkt_501_600.pickle", "rb") as f:
+    cluster_news_6 = pickle.load(f)
+with open(f"headlines_mkt_601_700.pickle", "rb") as f:
+    cluster_news_7 = pickle.load(f)
+with open(f"headlines_mkt_701_800.pickle", "rb") as f:
+    cluster_news_8 = pickle.load(f)
+with open(f"headlines_mkt_801_900.pickle", "rb") as f:
+    cluster_news_9 = pickle.load(f)
+with open(f"headlines_mkt_901_1000.pickle", "rb") as f:
+    cluster_news_10 = pickle.load(f)
+with open(f"headlines_mkt_1001_1040.pickle", "rb") as f:
+    cluster_news_11 = pickle.load(f)
+
+df_news = pd.DataFrame(cluster_news_1, columns=('Headlines', 'Dates', 'Ticker'))
+df_news = df_news.append(pd.DataFrame(cluster_news_2, columns=('Headlines', 'Dates', 'Ticker')), ignore_index=True)
+df_news = df_news.append(pd.DataFrame(cluster_news_3, columns=('Headlines', 'Dates', 'Ticker')), ignore_index=True)
+df_news = df_news.append(pd.DataFrame(cluster_news_4, columns=('Headlines', 'Dates', 'Ticker')), ignore_index=True)
+df_news = df_news.append(pd.DataFrame(cluster_news_5, columns=('Headlines', 'Dates', 'Ticker')), ignore_index=True)
+df_news = df_news.append(pd.DataFrame(cluster_news_6, columns=('Headlines', 'Dates', 'Ticker')), ignore_index=True)
+df_news = df_news.append(pd.DataFrame(cluster_news_7, columns=('Headlines', 'Dates', 'Ticker')), ignore_index=True)
+df_news = df_news.append(pd.DataFrame(cluster_news_8, columns=('Headlines', 'Dates', 'Ticker')), ignore_index=True)
+df_news = df_news.append(pd.DataFrame(cluster_news_9, columns=('Headlines', 'Dates', 'Ticker')), ignore_index=True)
+df_news = df_news.append(pd.DataFrame(cluster_news_10, columns=('Headlines', 'Dates', 'Ticker')), ignore_index=True)
+df_news = df_news.append(pd.DataFrame(cluster_news_11, columns=('Headlines', 'Dates', 'Ticker')), ignore_index=True)
+
+"""CHANGE THE DATE FORMAT AND MOVE NEWS TO NEXT DAY AFTER 16:00"""
+def change_dates_tocsv(dataframe, today='', yesterday=''):
+    # df1 = pd.DataFrame(headlines, columns=('Headlines', 'Dates', 'Ticker'))
+    df1 = dataframe
     df1.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
-    df1 = df1.drop_duplicates()
-    df1 = df1.sort_values(by='Dates')
-    df1.reset_index(drop=True, inplace=True)
+    # print(len(df1['Headlines']))
+    # df1 = df1.drop_duplicates()
+    # df1 = df1.sort_values(by='Dates')
+    # df1.reset_index(drop=True, inplace=True)
     for i in range(len(df1['Dates'])):
         match = re.search(r'\w{3}\.\s\d{1,2}\,\s\d{4}|May\s\d{1,2}\,\s\d{4}|\w{3}\.\s\d{1,2}|May\s\d{1,2}|\bToday\b|\bYesterday\b',
                           df1['Dates'].iloc[i])
@@ -99,15 +203,20 @@ def change_dates_tocsv(headlines, today='', yesterday=''):
                     break
                 except ValueError:
                     pass
-    df1.to_csv('Top_News_2.csv', index=False)
-change_dates_tocsv(headlines, today='Jul. 8, 2020', yesterday='Jul. 7, 2020')
+    df1.to_csv('Top_News_4.csv', index=False)
+# change_dates_tocsv(df_news, today=datetime.date.today().strftime('%b %d, %Y'), yesterday=(datetime.date.today()-datetime.timedelta(days=1)).strftime('%b %d, %Y'))
 
-stop_words = set(stopwords.words('english'))
-ps = PorterStemmer()
 
-df1 = pd.read_csv('Top_News_2.csv')
+"""COMBINE TOP NEWS AND MARKET OUTLOOK: Top_News_2.csv is Top News, Top_News_4.csv is Market Outlook"""
+df0 = pd.read_csv('Top_News_2.csv')
+df0.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
+df1 = pd.read_csv('Top_News_4.csv')
 df1.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
+df1 = df1.append(df0)
+df1 = df1.sort_values(by='Dates')
+df1.reset_index(drop=True, inplace=True)
 
+"""GET S&P500 CLOSING PRICES (^GSPC)"""
 def create_price(start, end):
     df_stock = web.DataReader('^GSPC', 'yahoo', start, end)
     df_stock.to_csv('^GSPC_2.csv')
@@ -127,6 +236,7 @@ start = datetime.datetime(2015, 12, 20)
 end = datetime.datetime(2020, 6, 22)
 df2 = create_price(start, end)
 
+"""CREATE THE DATES, HEADLINES, TICKER, AND LABEL (LABEL 0 IS UP AND 1 IS DOWN, CALCULATED BY DAILY RETURN)"""
 def stopwords_and_stemmimg(df, df2):
     date_dict = {}
     data_for_df = []
@@ -162,6 +272,49 @@ def stopwords_and_stemmimg(df, df2):
     df4.reset_index(inplace=True)
     return df4
 
+"""USE FOE ROBERTA TOKENIZER DOING WORD EMBEDDING"""
+# tokenizer = tokenizers.ByteLevelBPETokenizer(
+#     vocab_file='/Users/ccw/PycharmProjects/Wilfred/tf-roberta/roberta-base-vocab.json',
+#     merges_file='/Users/ccw/PycharmProjects/Wilfred/tf-roberta/roberta-base-merges.txt',
+#     lowercase=True,
+#     add_prefix_space=True)
+
+# def stopwords_and_stemmimg(df, df2):
+#     date_dict = {}
+#     data_for_df = []
+#     for i in range(len(df['Dates'])):
+#         date_dict[df['Dates'].iloc[i]] = []
+#
+#     for i in range(len(df['Headlines'])):
+#         news = df['Headlines'].iloc[i]
+#         enc = tokenizer.encode(news)
+#         date_dict[df['Dates'].iloc[i]].append(enc.ids)
+#         # date_dict[df['Dates'].iloc[i]].append(tf.keras.preprocessing.sequence.pad_sequences([enc.ids], maxlen=50, padding='post', dtype=np.float)[0])
+#
+#     # for i in date_dict:
+#     #     print(len(date_dict[i]))
+#
+#     for i in date_dict:
+#         data_for_df.append((date_dict[i], i))
+#     with open("data_for_df.pickle", "wb") as f:
+#         pickle.dump(data_for_df, f)
+#
+#     with open("data_for_df.pickle", "rb") as f:
+#         data_for_df = pickle.load(f)
+#     df3 = pd.DataFrame(data_for_df)
+#     df3.columns = ['Headlines', 'Dates']
+#     # df3.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
+#     df3 = df3.sort_values(by='Dates')
+#     df3.set_index('Dates', inplace=True)
+#
+#     df4 = pd.merge(df3['Headlines'], df2['Label'], left_index=True, right_index=True, how='left')
+#     df4['New_Headlines'] = df4['Headlines'].shift(1)
+#     df4.dropna(inplace=True)
+#     df4['Label'] = df4['Label'].astype('int')
+#     df4.reset_index(inplace=True)
+#     return df4
+
+"""PLOT THE DISTRIBUTION OF TICKER SHOWN IN HEADLINES"""
 number_of_news = {}
 for i in df1['Ticker']:
     if i in ticker:
@@ -186,9 +339,10 @@ def plot():
     plt.ylim(0, 300)
     plt.xticks(top100[:, 0], rotation='vertical')
     plt.show()
-# plot()
+plot()
 
-def create_Kmanes():
+"""CREATE CLUSTERS, TO SEE HOW WORD EMBEDDING DONE BY TFID VECTORIZER TO GROUP THE NEWS INTO CLUSTERS"""
+def create_total_news():
     total_news = []
     for i in range(len(df1['Headlines'])):
         news = nltk.word_tokenize(df1['Headlines'].iloc[i].lower())
@@ -196,13 +350,13 @@ def create_Kmanes():
         stemmed_sentence = [ps.stem(w) for w in filtered_sentence]
         news = ' '.join(stemmed_sentence)
         total_news.append(news)
-    with open("total_news_2.pickle", "wb") as f:
+    with open("total_news_4.pickle", "wb") as f:
         pickle.dump(total_news, f)
-# create_Kmanes()
+# create_total_news()
 
-with open("total_news_2.pickle", "rb") as f:
+with open("total_news_4.pickle", "rb") as f:
     total_news = pickle.load(f)
-def create_total_news():
+def create_Kmanes():
     # countvector = CountVectorizer(ngram_range=(1, 2), max_df=0.4, max_features=10000, stop_words=stop_words)
     tfidfconverter = TfidfVectorizer(ngram_range=(1, 1), max_features=12000, max_df=0.4, stop_words=stop_words)
     traindataset = tfidfconverter.fit_transform(total_news)
@@ -210,15 +364,15 @@ def create_total_news():
     clf.fit(traindataset)
     labels = clf.labels_
     centroids = clf.cluster_centers_
-    with open("labels_2.pickle", "wb") as f:
+    with open("labels_4.pickle", "wb") as f:
         pickle.dump(labels, f)
-    with open("centroids_2.pickle", "wb") as f:
+    with open("centroids_4.pickle", "wb") as f:
         pickle.dump(centroids, f)
-# create_total_news()
+# create_Kmanes()
 
-with open("labels_2.pickle", "rb") as f:
+with open("labels_4.pickle", "rb") as f:
     labels = pickle.load(f)
-with open("centroids_2.pickle", "rb") as f:
+with open("centroids_4.pickle", "rb") as f:
     centroids = pickle.load(f)
 def create_cluster_news():
     cluster_id = {}
@@ -230,27 +384,40 @@ def create_cluster_news():
         cluster_news[i] = []
         for k in j:
             cluster_news[i].append(k)
-    with open("cluster_news_top_news_2.pickle", "wb") as f:
+    with open("cluster_news_top_news_4.pickle", "wb") as f:
         pickle.dump(cluster_news, f)
 # create_cluster_news()
 
-with open("cluster_news_top_news_2.pickle", "rb") as f:
-    cluster_news = pickle.load(f)
-tree = BallTree(centroids)
-dist, ind = tree.query(centroids, k=2)
-# for i in ind:
-#     if 25 not in i:
-#         print(i)
-#         for index in i:
-#             for j in cluster_news[index]:
-#                 print(index, df1['Headlines'][j], df1['Dates'][j])
+def show_cluster_news():
+    with open("cluster_news_top_news_4.pickle", "rb") as f:
+        cluster_news = pickle.load(f)
+    tree = BallTree(centroids)
+    dist, ind = tree.query(centroids, k=2)
+    print(ind)
+    for i in ind:
+        if 13 not in i:
+            print(i)
+            for index in i:
+                for j in cluster_news[index]:
+                    print(index, df1['Headlines'][j], df1['Dates'][j])
+show_cluster_news()
 
+
+"""RUN stopwords_and_stemmimg FUNCTION, THEN SEPARATING THE DATASET USED FOR TRAINING AND TESTING"""
 df = stopwords_and_stemmimg(df1, df2)
 traindata = df.iloc[:int(len(df['Headlines'])*0.8)]
 testdata = df.iloc[int(len(df['Headlines'])*0.8):]
 
 
-"""Grid Search for Random Forest"""
+"""USE WHEN ROBERTA TOKENIZER IS USED FOR TOKENIZING AND WORD EMBEDDING"""
+# dataset = []
+# for i in df['New_Headlines'].values:
+#     dataset.append(tf.keras.preprocessing.sequence.pad_sequences([np.concatenate(i)], maxlen=1300, padding='post', dtype=np.float)[0])
+# dataset = np.array(dataset).reshape(-1, 1300)
+# xtrain, xtest, ytrain, ytest = train_test_split(dataset, df['Label'], test_size=0.2)
+
+
+"""GRID SEARCH FOR RANDOM FOREST"""
 # pipeline = Pipeline([
 #     # ('vect', CountVectorizer()),
 #     ('tfidf', TfidfVectorizer()),
@@ -263,14 +430,14 @@ testdata = df.iloc[int(len(df['Headlines'])*0.8):]
 #     # 'vect__ngram_range': ((1, 1), (1, 2), (2, 2)),
 #     # 'vect__stop_words': [stop_words],
 #     'tfidf__max_df': (0.3, 0.4, 0.5, 0.6),
-#     'tfidf__max_features': (10000, 40000, 50000),
+#     'tfidf__max_features': (10000, 12000, 20000),
 #     'tfidf__ngram_range': ((1, 1), (1, 2), (2, 2)),
 #     'tfidf__stop_words': [stop_words],
-#     'clf__n_estimators': (1000, 1500, 2000),
+#     'clf__n_estimators': (1000, 2000, 4000),
 #     'clf__criterion': ['entropy']
 # }
 #
-# grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1, cv=10)
+# grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1, cv=3, scoring='accuracy')
 #
 # grid_search.fit(traindata['Headlines'], traindata['Label'])
 # print("Best score: %0.3f" % grid_search.best_score_)
@@ -279,11 +446,11 @@ testdata = df.iloc[int(len(df['Headlines'])*0.8):]
 # for param_name in sorted(parameters.keys()):
 #     print("\t%s: %r" % (param_name, best_parameters[param_name]))
 
-"""Random Forest"""
+"""RANDOM FOREST FOR SKLEARN VECTORIZER"""
 # countvector = CountVectorizer(ngram_range=(1, 2), max_df=0.4, max_features=10000, stop_words=stop_words)
-tfidfconverter = TfidfVectorizer(ngram_range=(1, 1), max_features=12000, max_df=0.4, stop_words=stop_words)
-traindataset = tfidfconverter.fit_transform(traindata['New_Headlines'].values)
-randomclassifier = RandomForestClassifier(n_estimators=4000, criterion='entropy')
+tfidfconverter = TfidfVectorizer(ngram_range=(1, 1), max_features=20000, max_df=0.5, stop_words=stop_words)
+traindataset = tfidfconverter.fit_transform(traindata['New_Headlines'])
+randomclassifier = RandomForestClassifier(n_estimators=1000, criterion='entropy')
 randomclassifier.fit(traindataset, traindata['Label'])
 
 testdataset = tfidfconverter.transform(testdata['New_Headlines'])
@@ -292,41 +459,163 @@ predictions_prob = randomclassifier.predict_proba(testdataset)
 accuarcy = accuracy_score(testdata['Label'], predictions)
 classification = classification_report(testdata['Label'], predictions)
 matrix = confusion_matrix(testdata['Label'], predictions)
+logloss = log_loss(testdata['Label'], predictions_prob, eps=1e-15)
+print(accuarcy)
+print(classification)
+print(matrix)
+print(logloss)
+
+"""RANDOM FOREST FOR ROBERTA"""
+# randomclassifier = RandomForestClassifier(n_estimators=1000, criterion='entropy')
+# randomclassifier.fit(xtrain, ytrain)
+#
+# predictions = randomclassifier.predict(xtest)
+# predictions_prob = randomclassifier.predict_proba(xtest)
+# accuarcy = accuracy_score(ytest, predictions)
+# classification = classification_report(ytest, predictions)
+# matrix = confusion_matrix(ytest, predictions)
+# logloss = log_loss(ytest, predictions_prob, eps=1e-15)
 # print(accuarcy)
 # print(classification)
 # print(matrix)
+# print(logloss)
 
-"""MLP"""
+"""GRID SEARCH FOR MLP"""
+# def create_model():
+#     model = tf.keras.models.Sequential()
+#     model.add(tf.keras.layers.Dense(units=1024, activation='relu', kernel_initializer='he_uniform'))
+#     model.add(tf.keras.layers.Dense(units=64, activation='relu'))
+#     model.add(tf.keras.layers.Dense(units=1, activation='sigmoid',))
+#     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+#     return model
+#
+# model = KerasClassifier(build_fn=create_model, verbose=0)
+# batch_size = [10, 20, 40, 60, 80, 100]
+# epochs = [10, 20, 50, 100]
+# param_grid = dict(batch_size=batch_size, epochs=epochs)
+# grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=-1, cv=3, scoring='accuracy')
+# grid_result = grid.fit(traindataset.toarray(), traindata['Label'])
+#
+# print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+
+"""MLP FOR SKLEARN VECTORIZER"""
+model = tf.keras.models.Sequential()
+model.add(tf.keras.layers.Dense(units=256, activation='relu', kernel_initializer='he_uniform'))
+model.add(tf.keras.layers.Dropout(0.5))
+model.add(tf.keras.layers.Dense(units=64, activation='relu'))
+model.add(tf.keras.layers.Dropout(0.5))
+model.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
+
+tensorboard = TensorBoard(log_dir="logs/{}".format('MLP_2'))
+adam = tf.keras.optimizers.Adam(lr=3e-6)
+model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
+model.fit(traindataset.toarray(), traindata['Label'], epochs=300, batch_size=32, verbose=1, validation_split=0.2, shuffle=True, callbacks=[tensorboard])
+
+val_loss, val_acc = model.evaluate(testdataset.toarray(), testdata['Label'])
+print(val_acc)
+# print((model.predict(xtest)).shape)
+
+"""MLP FOR ROBERTA"""
 # model = tf.keras.models.Sequential()
-# model.add(tf.keras.layers.Dense(units=1024, activation='relu', kernel_initializer='he_uniform'))
+# model.add(tf.keras.layers.Dense(units=256, input_shape=(1300,), activation='relu', kernel_initializer='he_uniform'))
+# model.add(tf.keras.layers.Dropout(0.5))
 # model.add(tf.keras.layers.Dense(units=64, activation='relu'))
-# model.add(tf.keras.layers.Dense(units=1, activation='sigmoid',))
-#
-# model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-# model.fit(traindataset.toarray(), traindata['Label'], epochs=20, batch_size=32, verbose=1, validation_split=0.2)
-#
-# val_loss, val_acc = model.evaluate(testdataset.toarray(), testdata['Label'])
-# print(val_acc)
-# print(np.array(traindata['Label']).reshape(1, -1, 1))
-
-"""LSTM"""
-# model = tf.keras.models.Sequential()
-# model.add(tf.keras.layers.LSTM(units=256, input_shape=(1, traindataset.toarray().shape[1]), return_sequences=True))
-# model.add(tf.keras.layers.LSTM(units=256, input_shape=(1, traindataset.toarray().shape[1])))
+# model.add(tf.keras.layers.Dropout(0.5))
 # model.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
 #
-# model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-# model.fit(np.array(traindataset.toarray()).reshape(traindataset.toarray().shape[0], 1, traindataset.toarray().shape[1]), traindata['Label'], epochs=10, verbose=1, validation_split=0.3, shuffle=False)
+# tensorboard = TensorBoard(log_dir="logs/{}".format('MLP_2'))
+# adam = tf.keras.optimizers.Adam()#lr=3e-6)
+# model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
+# model.fit(xtrain, ytrain, epochs=100, batch_size=64, verbose=1, validation_split=0.2, shuffle=True, callbacks=[tensorboard])
 #
-# val_loss, val_acc = model.evaluate(np.array(testdataset.toarray()).reshape(testdataset.toarray().shape[0], 1, testdataset.toarray().shape[1]), testdata['Label'])
+# val_loss, val_acc = model.evaluate(xtest, ytest)
+# print(val_acc)
+# print((model.predict(xtest)).shape)
+
+
+"""GRID SEARCH FOR LSTM"""
+# def create_model():
+#     model = tf.keras.models.Sequential()
+#     model.add(tf.keras.layers.LSTM(units=256, input_shape=(1, traindataset.toarray().shape[1]), return_sequences=True))
+#     model.add(tf.keras.layers.LSTM(units=256, input_shape=(1, traindataset.toarray().shape[1])))
+#     model.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
+#     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+#     return model
+#
+# model = KerasClassifier(build_fn=create_model, verbose=0)
+# batch_size = [10, 20, 40, 60, 80, 100]
+# epochs = [10, 20, 50, 100]
+# param_grid = dict(batch_size=batch_size, epochs=epochs)
+# grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=-1, cv=3, scoring='accuracy')
+# grid_result = grid.fit(np.array(traindataset.toarray()).reshape(traindataset.toarray().shape[0], 1, traindataset.toarray().shape[1]), traindata['Label'])
+#
+# print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+
+"""LSTM FOR SKLEARN VECTORIZER"""
+model = tf.keras.models.Sequential()
+model.add(tf.keras.layers.LSTM(units=256, input_shape=(1, traindataset.toarray().shape[1]), return_sequences=True))
+model.add(tf.keras.layers.LSTM(units=256, input_shape=(1, traindataset.toarray().shape[1])))
+model.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
+
+adam = tf.keras.optimizers.Adam(lr=1e-5)
+model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
+# tensorboard = TensorBoard(log_dir="logs/{}".format('LSTM'))
+model.fit(np.array(traindataset.toarray()).reshape(traindataset.toarray().shape[0], 1, traindataset.toarray().shape[1]), traindata['Label'], epochs=50, batch_size=32, validation_split=0.2, verbose=1, shuffle=False)
+
+val_loss, val_acc = model.evaluate(np.array(testdataset.toarray()).reshape(testdataset.toarray().shape[0], 1, testdataset.toarray().shape[1]), testdata['Label'])
+print(val_acc)
+
+"""LSTM FOR ROBERTA"""
+# dataset = np.array(dataset).reshape(-1, 1300, 1)
+# xtrain, xtest, ytrain, ytest = train_test_split(dataset, df['Label'], test_size=0.2)
+# model = tf.keras.models.Sequential()
+# model.add(tf.keras.layers.LSTM(units=62, input_shape=(xtrain.shape[1], xtrain.shape[2]), return_sequences=True))
+# model.add(tf.keras.layers.LSTM(units=64, input_shape=(xtrain.shape[1], xtrain.shape[2])))
+# model.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
+#
+# adam = tf.keras.optimizers.Adam()#lr=1e-5)
+# model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
+# tensorboard = TensorBoard(log_dir="logs/{}".format('LSTM_2'))
+# model.fit(xtrain, ytrain, epochs=10, batch_size=32, validation_split=0.2, verbose=1, shuffle=False, callbacks=[tensorboard])
+#
+# val_loss, val_acc = model.evaluate(xtest, ytest)
 # print(val_acc)
 
-filename = 'finalized_model.sav'
-pickle.dump(randomclassifier, open(filename, 'wb'))
-pickle.dump(tfidfconverter,open('feature.pkl', 'wb'))
 
+"""SAVE THE MODEL OF RANDOM FOREST AS IT PROVIDES BEST RESULT"""
+filename = 'finalized_model.sav'
+# pickle.dump(randomclassifier, open(filename, 'wb'))
+# pickle.dump(tfidfconverter,open('feature.pkl', 'wb'))
+
+
+
+
+
+
+
+"""TESTING FOR GETTING ONE-DAY NEWS HEADLINES"""
 def testing_get_news():
     headlines, dates, tickers, total = [], [], [], []
+    for i in range(5,7):
+        i += 1
+        url = f"https://seekingalpha.com/market-outlook?page={str(i)}"
+        headers = {
+            "content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "Origin": "https://seekingalpha.com",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36"}
+
+        response = requests.get(url=url, headers=headers)
+        while response.status_code != 200:
+            print(url, response.status_code)
+            response = requests.get(url=url, headers=headers)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            for script in soup.find_all('div', class_="media-body"):
+                for i in script.find_all('a', class_="a-title"):
+                    headlines.append(i.text)
+                for j in script.find_all('span'):
+                    if re.search(r'\d\b\sAM\b', j.text) or re.search(r'\d\b\sPM\b', j.text):
+                        dates.append(j.text)
     for i in range(1):
         i += 1
         url = f"https://seekingalpha.com/market-news/top-news?page={str(i)}"
@@ -345,29 +634,33 @@ def testing_get_news():
                 dates.append(script.text)
             for script in soup.find_all('div', class_="media-left"):
                 tickers.append(script.text)
-            for i in range(len(headlines)):
-                total.append((headlines[i], dates[i], tickers[i]))
+
+    for k in range(len(headlines)):
+        total.append((headlines[k], dates[k], ''))
     return total
 
 def testing(start, end, today, yesterday):
     news = testing_get_news()
-    ytd_news = [i for i in news]
+    # ytd_news = [i for i in news]
+    ytd_news = pd.DataFrame(news, columns=('Headlines', 'Dates', 'Ticker'))
     change_dates_tocsv(ytd_news, today, yesterday)
-    df1 = pd.read_csv('Top_News_2.csv')
+    df1 = pd.read_csv('Top_News_4.csv')
     df1.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
     df2 = create_price(start, end)
     print(df2)
     df = stopwords_and_stemmimg(df1, df2)
     for i in range(len(df['Label'])):
-        print('Actual: ', df['Label'].iloc[i])
+        print('Actual: ', df['Label'].iloc[i], df['New_Headlines'].iloc[i])
     tfidfconverter = pickle.load(open('feature.pkl', 'rb'))
     dataset = tfidfconverter.transform(df['New_Headlines'])
     loaded_model = pickle.load(open(filename, 'rb'))
-    result = loaded_model.predict(dataset)
-    print('Predict: ', result[0])
+    result = loaded_model.predict_proba(dataset)
+    result_ = loaded_model.predict(dataset)
+    print('Predict probability: ', result[0])
+    print('Predict: ', result_[0])
 
-start = datetime.datetime(2020, 6, 26)
-end = datetime.datetime(2020, 6, 26)
-today = 'Jul. 8, 2020'
-yesterday = 'Jul. 7, 2020'
-testing(start, end, today, yesterday)
+# start = datetime.datetime(2020, 6, 26)
+# end = datetime.datetime(2020, 6, 26)
+# today = datetime.date.today().strftime('%b %d, %Y')
+# yesterday = (datetime.date.today()-datetime.timedelta(days=1)).strftime('%b %d, %Y')
+# testing(start, end, today, yesterday)

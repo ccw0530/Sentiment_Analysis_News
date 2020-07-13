@@ -13,6 +13,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from nltk.sentiment.vader import SentimentIntensityAnalyzer as SIA
 import pandas_datareader.data as web
+from nltk.stem import PorterStemmer
 
 def create_dataset(dataset, look_back, prediction_day):
     dataX, dataY = [], []
@@ -21,16 +22,24 @@ def create_dataset(dataset, look_back, prediction_day):
         dataY.append(dataset[i + look_back + prediction_day][0])
     return np.array(dataX), np.array(dataY)
 
-df = pd.read_csv('Top_News_2.csv')
+df0 = pd.read_csv('Top_News_2.csv')
+df0.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
+df = pd.read_csv('Top_News_4.csv')
 df.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
+df = df.append(df0)
+df = df.sort_values(by='Dates')
+df.reset_index(drop=True, inplace=True)
+
 stop_words = set(stopwords.words('english'))
+ps = PorterStemmer()
 results = []
 def news_sentiment():
     for i in range(len(df['Headlines'])):
         news = df['Headlines'][i]
-        news = nltk.word_tokenize(news)
-        news = [w for w in news if w not in stop_words]
-        news = ' '.join(news)
+        word_tokens = nltk.word_tokenize(news)
+        filtered_sentence = [w for w in word_tokens if w not in stop_words]
+        stemmed_sentence = [ps.stem(w) for w in filtered_sentence]
+        news = ' '.join(stemmed_sentence)
         pol_score = SIA().polarity_scores(news)  # run analysis
         pol_score['headline'] = news  # add headlines for viewing
         pol_score['date'] = df['Dates'][i]
