@@ -111,10 +111,33 @@ Best parameters set:
  
  Log Loss: 0.7008060886845231
  
+ ************UPDATE on using Market Outlook and Top News headlines together************
+
+Accuraqcy increases by around 3-6%. Log Loss also decreases, meaning predicted probability is closer to to actual result
+
+Recall has 11% improvement as it can distinguish more down movement correctly
+
+
+ Accuracy: 0.6079295154185022 (range approxiately from 0.57 - 0.60)
+
+  
+                  precision    recall  f1-score   support
+
+           0           0.60      0.90      0.72       129
+           1           0.63      0.22      0.33        98
+
+    accuracy                               0.61       227
+    macro avg          0.62      0.56      0.53       227
+    weighted avg       0.61      0.61      0.55       227
+
+Confusion Matrix:
+
+[[116  13]
+
+ [ 76  22]]
  
- 
- 
- 
+
+Log Loss: 0.681201017351206
  
  
  
@@ -128,6 +151,10 @@ Data is shuffled before fitting to train
 
 Accuracy: 0.5619469285011292 (range approxiately from 0.55 - 0.56)
 
+![Image of mlp validation accuracy](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/pics/Screenshot%202020-07-12%20at%209.57.31%20PM.png)
+
+![Image of mlp validation loss](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/pics/Screenshot%202020-07-12%20at%209.58.06%20PM.png)
+
 &nbsp;
 
 <ins>LSTM</ins>
@@ -135,6 +162,10 @@ Accuracy: 0.5619469285011292 (range approxiately from 0.55 - 0.56)
 Data is NOT shuffled
 
 Accuracy: 0.5663716793060303 (relatively stable comparing with above two models)
+
+![Image of lstm validation accuracy](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/pics/Screenshot%202020-07-12%20at%209.59.07%20PM.png)
+
+![Image of lstm validation loss](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/pics/Screenshot%202020-07-12%20at%209.59.22%20PM.png)
 
 ## Interpretation
 
@@ -203,6 +234,6 @@ However, if the last day closing price and the SIA score are fitted into the nex
 ## Conclusion
 It finds that news sentiemnt anaylsis have impact to price movement. However, wordings or sentiment of Headlines, number of headlines for 1 day, other factors, Vader sentiment classification would affect the result. 
 
-For the future, it may need to extract another sources of information, for example, Market Outlook article compsosed by diffrent aurthors may have more sentiment. And, it may need to build custom bag of words that is for the purpose of analyzing the sentiment of financial headlines
+For the future, it may need to extract another sources of information or include other factors to test any other area of news bringing imoact to stock movement. And, it may need to build custom bag of words that is for the purpose of analyzing the sentiment of financial headlines
 
 Also, using another NLP model, such as BERT which use bi-directional way to understand the context of the sentence better and use the pretrained BERT to train a  custom features.
