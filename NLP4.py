@@ -8,6 +8,7 @@ import requests
 from nltk.corpus import stopwords
 import datetime
 import matplotlib.pyplot as plt
+import matplotlib
 from sklearn.cluster import KMeans
 from sklearn.neighbors import BallTree
 from sklearn.ensemble import RandomForestClassifier
@@ -21,16 +22,28 @@ import pandas_datareader.data as web
 import tensorflow as tf
 from keras.utils import np_utils
 from sklearn.metrics import log_loss
+from sklearn import metrics
+from scipy.spatial.distance import cdist
 from keras.wrappers.scikit_learn import KerasClassifier
 from tensorflow.keras.callbacks import TensorBoard
 from tokenizers import ByteLevelBPETokenizer
 from transformers import TFRobertaModel
 import tokenizers
 from sklearn.model_selection import train_test_split
+from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
+import gensim
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import MinMaxScaler
+from sklearn import preprocessing
+from tqdm import tqdm
+from sklearn.decomposition import TruncatedSVD
 
 stop_words = set(stopwords.words('english'))
+"""CUSTOM THE STO WORDS BOTH APPEARING IN UO AND DOWN MOVEMENT"""
+stop_words.update(['may', 'new', 'continue', 'inflation', 'trump', 'economy', 'stock', 'market', 'gold', 'oil', 'natural', 'gas', 'china', 'street', 'breakfast', 'wall', 'street', 'fed', 'dollar'])
 ps = PorterStemmer()
 
+"""""""""""""""""""""""""DATA COLLECTION"""""""""""""""""""""""""
 
 """EXTRACT TICKERS FROM WIKI"""
 def save_sp500_tickers():
@@ -38,19 +51,15 @@ def save_sp500_tickers():
     soup = BeautifulSoup(r.text, "html.parser")
 
     stock_tag = soup.find("table", class_="wikitable sortable")
-    # print(stock_tag)
 
     tickers = []
-
     for row in stock_tag.find_all("tr")[1:]:
         ticker = row.find_all("td")[0].text
-        # print(ticker)
         ticker = ticker[:-1] #to remove the new line
-        # print(ticker)
         mapping = str.maketrans(".", "-")
         ticker = ticker.translate(mapping)
         tickers.append(ticker)
-    #
+
     with open("sp500tickers.pickle","wb") as f:
         pickle.dump(tickers, f)
 # save_sp500_tickers()
@@ -160,6 +169,10 @@ df_news = df_news.append(pd.DataFrame(cluster_news_9, columns=('Headlines', 'Dat
 df_news = df_news.append(pd.DataFrame(cluster_news_10, columns=('Headlines', 'Dates', 'Ticker')), ignore_index=True)
 df_news = df_news.append(pd.DataFrame(cluster_news_11, columns=('Headlines', 'Dates', 'Ticker')), ignore_index=True)
 
+
+
+"""""""""""""""""""""""""DATA PRE-PROCESSING"""""""""""""""""""""""""
+
 """CHANGE THE DATE FORMAT AND MOVE NEWS TO NEXT DAY AFTER 16:00"""
 def change_dates_tocsv(dataframe, today='', yesterday=''):
     # df1 = pd.DataFrame(headlines, columns=('Headlines', 'Dates', 'Ticker'))
@@ -224,6 +237,11 @@ def create_price(start, end):
     df2 = df2.drop(['Open', 'High', 'Low', 'Close', 'Volume'], axis=1)  # drop unwanted rows
     df2['Return'] = df2['Adj Close'] / df2['Adj Close'].shift(1) - 1
     df2['Label'] = ''
+    df_vix = web.DataReader('^VIX', 'yahoo', start, end)
+    df_vix.to_csv('^VIX.csv')
+    df2['t_VIX'] = df_vix['Adj Close']/df_vix['Adj Close'].shift(1) - 1
+    df2['VIX'] = df2['t_VIX'].shift(31)
+
     for i in range(len(df2['Return'])):
         if df2['Return'].iloc[i] >= 0:
             df2['Label'].iloc[i] = 0
@@ -232,12 +250,15 @@ def create_price(start, end):
         else:
             df2['Label'].iloc[i] = np.nan
     return df2
-start = datetime.datetime(2015, 12, 20)
+start = datetime.datetime(2015, 10, 20)
 end = datetime.datetime(2020, 6, 22)
 df2 = create_price(start, end)
 
 """CREATE THE DATES, HEADLINES, TICKER, AND LABEL (LABEL 0 IS UP AND 1 IS DOWN, CALCULATED BY DAILY RETURN)"""
 def stopwords_and_stemmimg(df, df2):
+    df = df.drop_duplicates()
+    df = df.sort_values(by='Dates')
+    df.reset_index(drop=True, inplace=True)
     date_dict = {}
     data_for_df = []
     for i in range(len(df['Dates'])):
@@ -245,14 +266,15 @@ def stopwords_and_stemmimg(df, df2):
 
     for i in range(len(df['Headlines'])):
         news = df['Headlines'].iloc[i]
-        word_tokens = nltk.word_tokenize(news)
-        filtered_sentence = [w for w in word_tokens if w not in stop_words]
-        stemmed_sentence = [ps.stem(w) for w in filtered_sentence]
-        news = ' '.join(stemmed_sentence)
-        date_dict[df['Dates'].iloc[i]].append(news)
+        if '?' not in news:
+            word_tokens = nltk.word_tokenize(news.lower())
+            filtered_sentence = [w for w in word_tokens if w not in stop_words]
+            stemmed_sentence = [ps.stem(w) for w in filtered_sentence]
+            news = ' '.join(stemmed_sentence)
+            date_dict[df['Dates'].iloc[i]].append(news)
 
     for i in date_dict:
-        data_for_df.append((' '.join(date_dict[i]).lower(), i))
+        data_for_df.append((' '.join(date_dict[i]), i))
 
     with open("data_for_df.pickle", "wb") as f:
         pickle.dump(data_for_df, f)
@@ -265,7 +287,7 @@ def stopwords_and_stemmimg(df, df2):
     df3 = df3.sort_values(by='Dates')
     df3.set_index('Dates', inplace=True)
 
-    df4 = pd.merge(df3['Headlines'], df2['Label'], left_index=True, right_index=True, how='left')
+    df4 = pd.merge(df3['Headlines'], df2[['Label', 'Return', 'VIX']], left_index=True, right_index=True, how='left')
     df4['New_Headlines'] = df4['Headlines'].shift(1)
     df4.dropna(inplace=True)
     df4['Label'] = df4['Label'].astype('int')
@@ -278,7 +300,7 @@ def stopwords_and_stemmimg(df, df2):
 #     merges_file='/Users/ccw/PycharmProjects/Wilfred/tf-roberta/roberta-base-merges.txt',
 #     lowercase=True,
 #     add_prefix_space=True)
-
+#
 # def stopwords_and_stemmimg(df, df2):
 #     date_dict = {}
 #     data_for_df = []
@@ -287,9 +309,14 @@ def stopwords_and_stemmimg(df, df2):
 #
 #     for i in range(len(df['Headlines'])):
 #         news = df['Headlines'].iloc[i]
-#         enc = tokenizer.encode(news)
-#         date_dict[df['Dates'].iloc[i]].append(enc.ids)
-#         # date_dict[df['Dates'].iloc[i]].append(tf.keras.preprocessing.sequence.pad_sequences([enc.ids], maxlen=50, padding='post', dtype=np.float)[0])
+#         if '?' not in news:
+#             word_tokens = nltk.word_tokenize(news.lower())
+#             filtered_sentence = [w for w in word_tokens if w not in stop_words]
+#             stemmed_sentence = [ps.stem(w) for w in filtered_sentence]
+#             news = ' '.join(stemmed_sentence)
+#             enc = tokenizer.encode(news)
+#             date_dict[df['Dates'].iloc[i]].append(enc.ids)
+#             # date_dict[df['Dates'].iloc[i]].append(tf.keras.preprocessing.sequence.pad_sequences([enc.ids], maxlen=50, padding='post', dtype=np.float)[0])
 #
 #     # for i in date_dict:
 #     #     print(len(date_dict[i]))
@@ -319,7 +346,6 @@ number_of_news = {}
 for i in df1['Ticker']:
     if i in ticker:
         number_of_news[i] = 0
-
 def plot():
     plot_number_of_news = []
     for i in range(len(df1['Ticker'])):
@@ -339,7 +365,7 @@ def plot():
     plt.ylim(0, 300)
     plt.xticks(top100[:, 0], rotation='vertical')
     plt.show()
-plot()
+# plot()
 
 """CREATE CLUSTERS, TO SEE HOW WORD EMBEDDING DONE BY TFID VECTORIZER TO GROUP THE NEWS INTO CLUSTERS"""
 def create_total_news():
@@ -360,8 +386,25 @@ def create_Kmanes():
     # countvector = CountVectorizer(ngram_range=(1, 2), max_df=0.4, max_features=10000, stop_words=stop_words)
     tfidfconverter = TfidfVectorizer(ngram_range=(1, 1), max_features=12000, max_df=0.4, stop_words=stop_words)
     traindataset = tfidfconverter.fit_transform(total_news)
+
+    svd = TruncatedSVD(n_components=120)
+    xtrain_svd = svd.fit_transform(traindataset)
+    """ELBOW PLOT"""
+    # mapping2 = {}
+    # for k in range(1, 11):
+    #     kmeanModel = KMeans(n_clusters=k)
+    #     kmeanModel.fit(traindataset)
+    #     mapping2[k] = kmeanModel.inertia_
+    # for key, val in mapping2.items():
+    #     print(str(key) + ' : ' + str(val))
+    # plt.plot(list(mapping2.keys()), list(mapping2.values()), 'bx-')
+    # plt.xlabel('Values of K')
+    # plt.ylabel('Inertia')
+    # plt.title('The Elbow Method using Inertia')
+    # plt.show()
+
     clf = KMeans(n_clusters=100)
-    clf.fit(traindataset)
+    clf.fit(xtrain_svd)
     labels = clf.labels_
     centroids = clf.cluster_centers_
     with open("labels_4.pickle", "wb") as f:
@@ -388,26 +431,42 @@ def create_cluster_news():
         pickle.dump(cluster_news, f)
 # create_cluster_news()
 
+news = []
 def show_cluster_news():
     with open("cluster_news_top_news_4.pickle", "rb") as f:
         cluster_news = pickle.load(f)
     tree = BallTree(centroids)
     dist, ind = tree.query(centroids, k=2)
-    print(ind)
+    # print(ind)
     for i in ind:
-        if 13 not in i:
-            print(i)
+        if 2 not in i:
             for index in i:
                 for j in cluster_news[index]:
-                    print(index, df1['Headlines'][j], df1['Dates'][j])
+                    # print(index, df1['Headlines'][j], df1['Dates'][j])
+                    news.append((df1['Headlines'][j], df1['Dates'][j], ''))
 show_cluster_news()
-
+df5 = pd.DataFrame(news, columns=('Headlines', 'Dates', 'Ticker'))
+df5.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
 
 """RUN stopwords_and_stemmimg FUNCTION, THEN SEPARATING THE DATASET USED FOR TRAINING AND TESTING"""
-df = stopwords_and_stemmimg(df1, df2)
+df = stopwords_and_stemmimg(df5, df2)
 traindata = df.iloc[:int(len(df['Headlines'])*0.8)]
 testdata = df.iloc[int(len(df['Headlines'])*0.8):]
 
+"""PLOT THE WORDCLOUD FOE UP AND DOWN MOVEMENT"""
+# stopwords1 = set(STOPWORDS)
+# stopwords1.update(['may', 'new', 'price', 'growth', 'investor', 'year', 'outlook', 'trade', 'rally', 'still', 'global', 'future', 'higher', 'continue', 'inflation', 'trump', 'economy', 'stock', 'market', 'gold', 'oil', 'natural', 'gas', 'china', 'street', 'breakfast', 'wall', 'street', 'fed', 'dollar'])
+# wordcloud = WordCloud(stopwords=stopwords1).generate(' '.join(df['New_Headlines'].loc[df['Label']==0]))
+# wordcloud2 = WordCloud(stopwords=stopwords1).generate(' '.join(df['New_Headlines'].loc[df['Label']==1]))
+# plt.imshow(wordcloud, interpolation='bilinear')
+# plt.imshow(wordcloud2, interpolation='bilinear')
+# plt.axis("off")
+# plt.show()
+# print(wordcloud.words_)
+
+
+
+"""""""""""""""""""""""""DATA EVALUATION"""""""""""""""""""""""""
 
 """USE WHEN ROBERTA TOKENIZER IS USED FOR TOKENIZING AND WORD EMBEDDING"""
 # dataset = []
@@ -449,11 +508,11 @@ testdata = df.iloc[int(len(df['Headlines'])*0.8):]
 """RANDOM FOREST FOR SKLEARN VECTORIZER"""
 # countvector = CountVectorizer(ngram_range=(1, 2), max_df=0.4, max_features=10000, stop_words=stop_words)
 tfidfconverter = TfidfVectorizer(ngram_range=(1, 1), max_features=20000, max_df=0.5, stop_words=stop_words)
-traindataset = tfidfconverter.fit_transform(traindata['New_Headlines'])
+column_trans = ColumnTransformer([('VIX_vector', 'passthrough', ['VIX']), ('New_Headlines_vector', tfidfconverter, 'New_Headlines')], remainder='drop')
+traindataset = column_trans.fit_transform(traindata)
 randomclassifier = RandomForestClassifier(n_estimators=1000, criterion='entropy')
 randomclassifier.fit(traindataset, traindata['Label'])
-
-testdataset = tfidfconverter.transform(testdata['New_Headlines'])
+testdataset = column_trans.transform(testdata)
 predictions = randomclassifier.predict(testdataset)
 predictions_prob = randomclassifier.predict_proba(testdataset)
 accuarcy = accuracy_score(testdata['Label'], predictions)
@@ -464,6 +523,44 @@ print(accuarcy)
 print(classification)
 print(matrix)
 print(logloss)
+
+
+# principal = 100000
+# true = 0
+# false = 0
+# acc_return = []
+# for i in range(len(predictions)):
+#     if predictions[i] == testdata['Label'].iloc[i] and predictions[i] == 0:
+#         principal = principal*(1+testdata['Return'].iloc[i])
+#         print('Correct Up: ', principal, testdata['Dates'].iloc[i], testdata['Return'].iloc[i], predictions_prob[i])
+#         # true += 1
+#     elif predictions[i] != testdata['Label'].iloc[i] and predictions[i] == 0:
+#         if testdata['Return'].iloc[i] > -0.05:
+#             principal = principal * (1 + testdata['Return'].iloc[i])
+#         else:
+#             principal = principal * (1 - 0.05)
+#         print('Wrong Up: ', principal, testdata['Dates'].iloc[i], testdata['Return'].iloc[i], predictions_prob[i])
+#         # false += 1
+#     elif predictions[i] == testdata['Label'].iloc[i] and predictions[i] == 1:
+#         principal = principal * (1 - testdata['Return'].iloc[i])
+#         print('Correct Down: ', principal, testdata['Dates'].iloc[i], testdata['Return'].iloc[i], predictions_prob[i])
+#         # true += 1
+#     elif predictions[i] != testdata['Label'].iloc[i] and predictions[i] == 1:
+#         if testdata['Return'].iloc[i] < 0.05:
+#             principal = principal * (1 - testdata['Return'].iloc[i])
+#         else:
+#             principal = principal * (1 - 0.05)
+#         print('Wrong Down: ', principal, testdata['Dates'].iloc[i], testdata['Return'].iloc[i], predictions_prob[i])
+#         # false += 1
+#
+#     acc_return.append(principal)
+# print(principal)
+# fig, ax1 = plt.subplots()
+# testdata['Dates']= pd.to_datetime(testdata['Dates'])
+# ax1.plot(testdata['Dates'], acc_return)
+# ax1.xaxis.set_major_locator(matplotlib.dates.MonthLocator([1, 4, 7, 10]))
+# ax1.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m'))
+# plt.show()
 
 """RANDOM FOREST FOR ROBERTA"""
 # randomclassifier = RandomForestClassifier(n_estimators=1000, criterion='entropy')
@@ -479,6 +576,7 @@ print(logloss)
 # print(classification)
 # print(matrix)
 # print(logloss)
+
 
 """GRID SEARCH FOR MLP"""
 # def create_model():
@@ -499,21 +597,21 @@ print(logloss)
 # print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
 
 """MLP FOR SKLEARN VECTORIZER"""
-model = tf.keras.models.Sequential()
-model.add(tf.keras.layers.Dense(units=256, activation='relu', kernel_initializer='he_uniform'))
-model.add(tf.keras.layers.Dropout(0.5))
-model.add(tf.keras.layers.Dense(units=64, activation='relu'))
-model.add(tf.keras.layers.Dropout(0.5))
-model.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
-
-tensorboard = TensorBoard(log_dir="logs/{}".format('MLP_2'))
-adam = tf.keras.optimizers.Adam(lr=3e-6)
-model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
-model.fit(traindataset.toarray(), traindata['Label'], epochs=300, batch_size=32, verbose=1, validation_split=0.2, shuffle=True, callbacks=[tensorboard])
-
-val_loss, val_acc = model.evaluate(testdataset.toarray(), testdata['Label'])
-print(val_acc)
-# print((model.predict(xtest)).shape)
+# model = tf.keras.models.Sequential()
+# model.add(tf.keras.layers.Dense(units=256, activation='relu', kernel_initializer='he_uniform'))
+# model.add(tf.keras.layers.Dropout(0.5))
+# model.add(tf.keras.layers.Dense(units=64, activation='relu'))
+# model.add(tf.keras.layers.Dropout(0.5))
+# model.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
+#
+# tensorboard = TensorBoard(log_dir="logs/{}".format('MLP_2'))
+# adam = tf.keras.optimizers.Adam(lr=3e-6)
+# model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
+# model.fit(traindataset.toarray(), traindata['Label'], epochs=300, batch_size=32, verbose=1, validation_split=0.2, shuffle=True, callbacks=[tensorboard])
+#
+# val_loss, val_acc = model.evaluate(testdataset.toarray(), testdata['Label'])
+# print(val_acc)
+# print((model.predict(testdataset)).shape)
 
 """MLP FOR ROBERTA"""
 # model = tf.keras.models.Sequential()
@@ -552,18 +650,18 @@ print(val_acc)
 # print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
 
 """LSTM FOR SKLEARN VECTORIZER"""
-model = tf.keras.models.Sequential()
-model.add(tf.keras.layers.LSTM(units=256, input_shape=(1, traindataset.toarray().shape[1]), return_sequences=True))
-model.add(tf.keras.layers.LSTM(units=256, input_shape=(1, traindataset.toarray().shape[1])))
-model.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
-
-adam = tf.keras.optimizers.Adam(lr=1e-5)
-model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
-# tensorboard = TensorBoard(log_dir="logs/{}".format('LSTM'))
-model.fit(np.array(traindataset.toarray()).reshape(traindataset.toarray().shape[0], 1, traindataset.toarray().shape[1]), traindata['Label'], epochs=50, batch_size=32, validation_split=0.2, verbose=1, shuffle=False)
-
-val_loss, val_acc = model.evaluate(np.array(testdataset.toarray()).reshape(testdataset.toarray().shape[0], 1, testdataset.toarray().shape[1]), testdata['Label'])
-print(val_acc)
+# model = tf.keras.models.Sequential()
+# model.add(tf.keras.layers.LSTM(units=256, input_shape=(1, traindataset.toarray().shape[1]), return_sequences=True))
+# model.add(tf.keras.layers.LSTM(units=256, input_shape=(1, traindataset.toarray().shape[1])))
+# model.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
+#
+# adam = tf.keras.optimizers.Adam(lr=1e-5)
+# model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
+# # tensorboard = TensorBoard(log_dir="logs/{}".format('LSTM'))
+# model.fit(np.array(traindataset.toarray()).reshape(traindataset.toarray().shape[0], 1, traindataset.toarray().shape[1]), traindata['Label'], epochs=50, batch_size=32, validation_split=0.2, verbose=1, shuffle=False)
+#
+# val_loss, val_acc = model.evaluate(np.array(testdataset.toarray()).reshape(testdataset.toarray().shape[0], 1, testdataset.toarray().shape[1]), testdata['Label'])
+# print(val_acc)
 
 """LSTM FOR ROBERTA"""
 # dataset = np.array(dataset).reshape(-1, 1300, 1)
@@ -596,7 +694,7 @@ filename = 'finalized_model.sav'
 """TESTING FOR GETTING ONE-DAY NEWS HEADLINES"""
 def testing_get_news():
     headlines, dates, tickers, total = [], [], [], []
-    for i in range(5,7):
+    for i in range(0, 15):
         i += 1
         url = f"https://seekingalpha.com/market-outlook?page={str(i)}"
         headers = {
@@ -616,7 +714,7 @@ def testing_get_news():
                 for j in script.find_all('span'):
                     if re.search(r'\d\b\sAM\b', j.text) or re.search(r'\d\b\sPM\b', j.text):
                         dates.append(j.text)
-    for i in range(1):
+    for i in range(3):
         i += 1
         url = f"https://seekingalpha.com/market-news/top-news?page={str(i)}"
         headers = {
@@ -647,20 +745,58 @@ def testing(start, end, today, yesterday):
     df1 = pd.read_csv('Top_News_4.csv')
     df1.iloc[:, 0].replace(['^a-zA-Z'], ' ', regex=True, inplace=True)
     df2 = create_price(start, end)
-    print(df2)
+    # print(df2)
     df = stopwords_and_stemmimg(df1, df2)
-    for i in range(len(df['Label'])):
-        print('Actual: ', df['Label'].iloc[i], df['New_Headlines'].iloc[i])
+    # for i in range(len(df['Label'])):
+    #     print('Actual: ', df['Label'].iloc[i], df['New_Headlines'].iloc[i])
     tfidfconverter = pickle.load(open('feature.pkl', 'rb'))
     dataset = tfidfconverter.transform(df['New_Headlines'])
     loaded_model = pickle.load(open(filename, 'rb'))
-    result = loaded_model.predict_proba(dataset)
-    result_ = loaded_model.predict(dataset)
-    print('Predict probability: ', result[0])
-    print('Predict: ', result_[0])
+    predictions_prob = loaded_model.predict_proba(dataset)
+    predictions = loaded_model.predict(dataset)
+    # print('Predict probability: ', predictions)
+    # print('Predict: ', predictions_prob)
 
-# start = datetime.datetime(2020, 6, 26)
-# end = datetime.datetime(2020, 6, 26)
+    principal = 100000
+    true = 0
+    false = 0
+    acc_return = []
+    for i in range(len(predictions)):
+        if predictions[i] == df['Label'].iloc[i] and predictions[i] == 0:
+            principal = principal * (1 + df['Return'].iloc[i])
+            print('Correct Up: ', principal, df['Dates'].iloc[i], df['Return'].iloc[i], predictions_prob[i])
+            # true += 1
+        elif predictions[i] != df['Label'].iloc[i] and predictions[i] == 0:
+            if df['Return'].iloc[i] > -0.05:
+                principal = principal * (1 + df['Return'].iloc[i])
+            else:
+                principal = principal * (1 - 0.05)
+            print('Wrong Up: ', principal, df['Dates'].iloc[i], df['Return'].iloc[i], predictions_prob[i])
+            # false += 1
+        elif predictions[i] == df['Label'].iloc[i] and predictions[i] == 1:
+            principal = principal * (1 - df['Return'].iloc[i])
+            print('Correct Down: ', principal, df['Dates'].iloc[i], df['Return'].iloc[i],
+                  predictions_prob[i])
+            # true += 1
+        elif predictions[i] != df['Label'].iloc[i] and predictions[i] == 1:
+            if df['Return'].iloc[i] < 0.05:
+                principal = principal * (1 - f['Return'].iloc[i])
+            else:
+                principal = principal * (1 - 0.05)
+            print('Wrong Down: ', principal, df['Dates'].iloc[i], df['Return'].iloc[i], predictions_prob[i])
+            # false += 1
+
+        acc_return.append(principal)
+    print(principal)
+    fig, ax1 = plt.subplots()
+    df['Dates'] = pd.to_datetime(df['Dates'])
+    ax1.plot(df['Dates'], acc_return)
+    ax1.xaxis.set_major_locator(matplotlib.dates.MonthLocator([1, 4, 7, 10]))
+    ax1.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y-%m'))
+    plt.show()
+# start = datetime.datetime(2020, 6, 22)
+# end = datetime.datetime(2020, 7, 10)
 # today = datetime.date.today().strftime('%b %d, %Y')
 # yesterday = (datetime.date.today()-datetime.timedelta(days=1)).strftime('%b %d, %Y')
 # testing(start, end, today, yesterday)
+
