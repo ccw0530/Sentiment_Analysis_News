@@ -90,7 +90,7 @@ Best parameters set:
  
  &nbsp;
   
- Accuracy: 0.5530973451327433 (range approxiately from 0.53 - 0.57)
+ Accuracy: 0.5530973451327433 (range approxiately from 0.53 to 0.57)
 
                     precision    recall  f1-score   support
 
@@ -118,7 +118,7 @@ Accuraqcy increases by around 3-6%. Log Loss also decreases, meaning predicted p
 Recall has 11% improvement as it can distinguish more down movement correctly
 
 
- Accuracy: 0.6079295154185022 (range approxiately from 0.57 - 0.60)
+ Accuracy: 0.6079295154185022 (range approxiately from 0.57 to 0.60)
 
   
                   precision    recall  f1-score   support
@@ -138,10 +138,33 @@ Confusion Matrix:
  
 
 Log Loss: 0.681201017351206
+
+ 
+ ************UPDATE on 19 Jul 2020 using Princiapl Component Analysis (PCA) for dimension deduction from 1200 to 120************ 
+ 
+ Accuraqcy increases by around 2%. Log Loss also decreases, meaning predicted probability is closer to to actual result
+
+ Recall has almost 20% improvement as it can distinguish more down movement correctly, although decreasing the recall for up movement
  
  
+ Accuracy: 0.6211453744493393 (range from 0.59 to 0.62)
  
+                   precision    recall  f1-score   support
+
+           0           0.64      0.78      0.70       129
+           1           0.59      0.42      0.49        98
+
+    accuracy                               0.62       227
+    macro avg          0.61      0.60      0.59       227
+    weighted avg       0.61      0.62      0.61       227
+
+Confusion Matrix:
+
+[[100  29]
+
+ [ 57  41]]
  
+Log Loss: 0.6766458016955135
  
  
  
