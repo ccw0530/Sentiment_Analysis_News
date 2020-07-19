@@ -140,7 +140,7 @@ Confusion Matrix:
 Log Loss: 0.681201017351206
 
  
- ************UPDATE on 19 Jul 2020 using Princiapl Component Analysis (PCA) for dimension deduction from 1200 to 120************ 
+ ************UPDATE on 19 Jul 2020, using clustered news by Ball Trees and Princiapl Component Analysis (PCA) for dimension deduction from 1200 to 120************ 
  
  Accuraqcy increases by around 2%. Log Loss also decreases, meaning predicted probability is closer to to actual result
 
