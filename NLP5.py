@@ -4,7 +4,7 @@ import pandas as pd
 import datetime
 import matplotlib.pyplot as plt
 
-df = pd.read_csv('^GSPC_2.csv', parse_dates=['Date'])
+df = pd.read_csv('SPY.csv', parse_dates=['Date'])
 df = df.drop(['Open', 'High', 'Low', 'Close', 'Volume'], axis=1)
 df['Return'] = df['Adj Close']/df['Adj Close'].shift(1)-1
 df['Label'] = ''

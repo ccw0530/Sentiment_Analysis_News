@@ -15,6 +15,10 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer as SIA
 import pandas_datareader.data as web
 from nltk.stem import PorterStemmer
 
+look_back = 1
+prediction_day = 1
+batch_size = 64
+
 def create_dataset(dataset, look_back, prediction_day):
     dataX, dataY = [], []
     for i in range(len(dataset) - look_back - prediction_day):
@@ -49,23 +53,28 @@ def news_sentiment():
         pickle.dump(results, f)
 # news_sentiment()
 
-def create_price():
-    start = datetime.datetime(2015, 12, 20)
-    end = datetime.datetime(2020, 6, 22)
-    df_stock = web.DataReader('^GSPC', 'yahoo', start, end)
-    df_stock.to_csv('^GSPC_2.csv')
-    df2 = pd.read_csv('^GSPC_2.csv', index_col=0)
+"""GET S&P500 CLOSING PRICES (SPY)"""
+def create_price(start, end):
+    df_stock = web.DataReader('SPY', 'yahoo', start, end)
+    df_stock.to_csv('SPY.csv')
+    df2 = pd.read_csv('SPY.csv', index_col=0)
     df2 = df2.drop(['Open', 'High', 'Low', 'Close', 'Volume'], axis=1)  # drop unwanted rows
     df2['Return'] = df2['Adj Close'] / df2['Adj Close'].shift(1) - 1
     df2['Label'] = ''
+    df_vix = web.DataReader('^VIX', 'yahoo', start, end)
+    df_vix.to_csv('^VIX.csv')
+    df2['t_VIX'] = df_vix['Adj Close']/df_vix['Adj Close'].shift(1) - 1
+    df2['VIX'] = df2['t_VIX'].shift(31-look_back)
+
     for i in range(len(df2['Return'])):
-        if df2['Return'][i] >= 0:
-            df2['Label'][i] = 0
-        elif df2['Return'][i] < 0:
-            df2['Label'][i] = 1
+        if df2['Return'].iloc[i] >= 0:
+            df2['Label'].iloc[i] = 0
+        elif df2['Return'].iloc[i] < 0:
+            df2['Label'].iloc[i] = 1
         else:
-            df2['Label'][i] = np.nan
+            df2['Label'].iloc[i] = np.nan
     return df2
+
 
 with open("result_top_news_2.pickle", "rb") as f:
     results = pickle.load(f)
@@ -98,21 +107,24 @@ def read_news(df2):
     plt.ylabel('Return')
     plt.show()
 
-    dfReturnsScore = pd.merge(df2[['Return']], df4[['Score']], left_index=True, right_index=True, how='left')
+    dfReturnsScore = pd.merge(df2[['Return', 'VIX']], df4[['Score']], left_index=True, right_index=True, how='left')
     dfReturnsScore.fillna(0, inplace=True)
     return dfReturnsScore
 
 # load the dataset
-dataframe = read_csv('^GSPC_2.csv')
+dataframe = read_csv('SPY.csv')
 dataframe = dataframe.drop(['Open', 'High', 'Low', 'Close', 'Volume'], axis=1)
 dataframe.set_index('Date', inplace=True)
 dataframe['Price Change'] = dataframe['Adj Close'] - dataframe['Adj Close'].shift(3)
 dataframe['Price Change'].fillna(0, inplace=True)
-df2 = create_price()
+start = datetime.datetime(2015, 10, 20)
+end = datetime.datetime(2020, 6, 22)
+df2 = create_price(start, end)
 dataframe2 = read_news(df2)
-dataframe3 = pd.merge(dataframe[['Price Change']], dataframe2[['Score']], left_index=True, right_index=True, how='left')
+dataframe3 = pd.merge(dataframe[['Price Change']], dataframe2[['Score', 'VIX']], left_index=True, right_index=True, how='left')
 # final_dataset = np.array(dataframe3['Price Change'].values, dtype=float).reshape((-1, 1))
 final_dataset = np.array(dataframe['Adj Close'].values, dtype=float).reshape((-1,1))
+
 
 def LSTM_model(mode, dataset):
     if mode == 'single':
@@ -131,9 +143,6 @@ def LSTM_model(mode, dataset):
     test_size = len(dataset) - train_size
     train, test = dataset[0:train_size, :], dataset[train_size:len(dataset), :]
 
-    look_back = 1
-    prediction_day = 1
-    batch_size = 64
     trainX, trainY = create_dataset(train, look_back, prediction_day)
     testX, testY = create_dataset(test, look_back, prediction_day)
 
