@@ -209,7 +209,7 @@ My strategy is to do daily trading according to next day preduction. On the very
 
 Below is the result of daily trading according to
 
-Principal at the end:  222,016.3702717533
+Principal at the end:  222,016.37
 
 ![Image of investment](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/pics/investment%20in%20spy.png)
 
