@@ -28,7 +28,7 @@ In S&P500, most of the news are focused on blue chips. Below is top 100 frequenc
 
 **Create the Target Label dataset**
 
-Use Pandas datareader for getting S&P500(Ticker: ^GSPC) Adj Close prices from Dec 2015 to Jun 2020 sourced from Yahoo Finance. It should be fine to also use S&P500 ETF Trust (Ticker:SPY) because of this ETF tracing the performance of S&P500
+Use Pandas datareader for getting S&P500 ETF (Ticker: SPY) Adj Close prices from Dec 2015 to Jun 2020 sourced from Yahoo Finance as this ETF has highly correclation with S&P500 (Ticker: ^GSPC).
 
 Calculate Daily Return by (today closing price/yesterday closing price -1)
 
@@ -209,7 +209,7 @@ My strategy is to do daily trading according to next day preduction. On the very
 
 Below is the result of daily trading according to
 
-Principal at the end:  222,016.3702717533
+Principal at the end:  222,016.37
 
 ![Image of investment](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/pics/investment%20in%20spy.png)
 
