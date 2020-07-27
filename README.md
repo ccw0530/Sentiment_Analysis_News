@@ -1,6 +1,10 @@
 # Sentiment_Analysis_News
 Getting S&amp;P top news from Dec 2015 to Jun 2020
 
+Training data: from Dec 2015 to Jul 2019
+
+Testing data: from Jul 2019 to Jun 2020
+
 This project is to use 1-day news headlines to predict next day S&P500 movement (Up or Down)
 
 Web scraping from the website Seeking Alpha to get "Headlines", "Dates" and "Ticker" of Top News
@@ -111,6 +115,9 @@ Best parameters set:
  
  Log Loss: 0.7008060886845231
  
+ &nbsp;
+ &nbsp;
+  
  ************UPDATE on using Market Outlook and Top News headlines together************
 
 Accuraqcy increases by around 3-6%. Log Loss also decreases, meaning predicted probability is closer to to actual result
@@ -138,6 +145,9 @@ Confusion Matrix:
  
 
 Log Loss: 0.681201017351206
+
+ &nbsp;
+ &nbsp;
 
  
  ************UPDATE on 19 Jul 2020, using clustered news by Ball Trees and Princiapl Component Analysis (PCA) for dimension deduction from 1200 to 120************ 
@@ -189,6 +199,20 @@ Accuracy: 0.5663716793060303 (relatively stable comparing with above two models)
 ![Image of lstm validation accuracy](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/pics/Screenshot%202020-07-12%20at%209.59.07%20PM.png)
 
 ![Image of lstm validation loss](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/pics/Screenshot%202020-07-12%20at%209.59.22%20PM.png)
+
+
+## Backtesting
+
+For doing backtesting of the investment strategy using testing dataset from Jul 2019 to Jun 2020 :
+
+My strategy is to do daily trading according to next day preduction. On the very first day, if the prediction is UP (target label: 0), I would buy SPY as many as possible, assuming the start-up principal is USD 100,000. Then, if the model still predicts UP for the next day, no trading for today as it kepps current stock amounts, otherwise, I would sell all stocks to cover the position and short sell it if the prediction is DOWN for next day (target label: 1). On the same time, in order to prevent huge loss on stop loss order is placed to limit loss around 5% each day
+
+Below is the result of daily trading according to
+
+Principal at the end:  222,016.3702717533
+
+![Image of investment](https://github.com/ccw0530/Sentiment_Analysis_News/blob/master/pics/investment%20in%20spy.png)
+
 
 ## Interpretation
 
