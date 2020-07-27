@@ -28,7 +28,7 @@ In S&P500, most of the news are focused on blue chips. Below is top 100 frequenc
 
 **Create the Target Label dataset**
 
-Use Pandas datareader for getting S&P500(Ticker: ^GSPC) Adj Close prices from Dec 2015 to Jun 2020 sourced from Yahoo Finance. It should be fine to also use S&P500 ETF Trust (Ticker:SPY) because of this ETF tracing the performance of S&P500
+Use Pandas datareader for getting S&P500 ETF (Ticker: SPY) Adj Close prices from Dec 2015 to Jun 2020 sourced from Yahoo Finance as this ETF has highly correclation with S&P500 (Ticker: ^GSPC).
 
 Calculate Daily Return by (today closing price/yesterday closing price -1)
 
